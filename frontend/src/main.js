@@ -5,7 +5,7 @@ import {
   Bold, Italic, Strikethrough, Heading1, Heading2, Heading3,
   List, ListOrdered, ListTodo, TextQuote,
   Code, SquareCode, Link, Image, Table, Minus,
-  PenLine, Columns2, Eye, Languages, Sigma, Plus, X, FileDown, FileText, FileOutput, Sun, Moon, Monitor,
+  PenLine, Columns2, Eye, Languages, Sigma, Plus, X, FileDown, FileText, FileOutput, Sun, Moon, Monitor, Square, Copy,
 } from 'lucide';
 import {
   GetStartupFiles, LoadSettings, SaveSettings, OpenFileDialog, SaveFileDialog,
@@ -14,7 +14,11 @@ import {
   IsDefaultMarkdownApp, ShowDefaultAppDialog,
   CheckForUpdate, ApplyUpdate, WasUpdated, GetVersion, SetTitleBarDark,
 } from '../wailsjs/go/main/App';
-import { EventsOn, OnFileDrop, WindowSetTitle, BrowserOpenURL } from '../wailsjs/runtime/runtime';
+import {
+  EventsOn, OnFileDrop, WindowSetTitle, BrowserOpenURL,
+  WindowMinimise, WindowToggleMaximise, WindowIsMaximised, Quit as RequestClose,
+} from '../wailsjs/runtime/runtime';
+import appIcon from './assets/icon.png';
 import { t, setLanguage, getLanguage, detectLanguage, languages, applyToDom } from './i18n.js';
 import { createEditor, commands, languageName } from './editor.js';
 import { renderPreview, lineAnchors } from './preview.js';
@@ -86,7 +90,40 @@ function samePath(a, b) {
 }
 
 function updateTitle() {
-  WindowSetTitle(`${fileName(active.path)}${active.dirty ? ' *' : ''} - ${t('appName')}`);
+  const title = `${fileName(active.path)}${active.dirty ? ' *' : ''} - ${t('appName')}`;
+  WindowSetTitle(title); // 工作列上的名稱
+  $('mdb-window-title').textContent = title; // 自訂標題列
+}
+
+// ---- 自訂標題列（最小化 / 最大化 / 關閉）----
+function buildTitleBar() {
+  $('mdb-titlebar-icon').src = appIcon;
+  const controls = $('mdb-window-controls');
+  const make = (icon, key, onClick, extra = '') => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `window-control ${extra}`;
+    b.dataset.i18nTitle = key;
+    b.append(createElement(icon, { width: 15, height: 15, 'stroke-width': 1.6 }));
+    b.addEventListener('click', onClick);
+    return b;
+  };
+  const maximize = make(Square, 'maximize', () => WindowToggleMaximise());
+  maximize.id = 'mdb-maximize';
+  controls.append(make(Minus, 'minimize', () => WindowMinimise()), maximize, make(X, 'closeWindow', () => RequestClose(), 'close'));
+  // 雙擊標題列：最大化 / 還原
+  $('mdb-titlebar').addEventListener('dblclick', (e) => {
+    if (!e.target.closest('.window-control')) WindowToggleMaximise();
+  });
+  const syncMaximize = async () => {
+    const max = await WindowIsMaximised();
+    maximize.replaceChildren(createElement(max ? Copy : Square, { width: max ? 14 : 13, height: max ? 14 : 13, 'stroke-width': 1.6 }));
+    maximize.dataset.i18nTitle = max ? 'restoreWindow' : 'maximize';
+    maximize.title = t(maximize.dataset.i18nTitle);
+    document.body.classList.toggle('maximized', max);
+  };
+  window.addEventListener('resize', syncMaximize);
+  syncMaximize();
 }
 
 function syncGlobalDirty() {
@@ -1079,6 +1116,7 @@ export const app = {
 
 // ---- 啟動 ----
 async function init() {
+  buildTitleBar();
   buildToolbar();
   settings = { ...settings, ...(await LoadSettings()) };
   const lang = settings.language || detectLanguage();

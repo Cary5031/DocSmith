@@ -35,6 +35,7 @@ func main() {
 			},
 		},
 		BackgroundColour:         &options.RGBA{R: 255, G: 255, B: 255, A: 1},
+		Frameless:                true, // 使用自訂標題列（顏色跟著介面主題），保留拖曳、縮放與貼齊
 		EnableDefaultContextMenu: true, // 讓編輯區可以右鍵剪下 / 複製 / 貼上
 		DragAndDrop: &options.DragAndDrop{
 			EnableFileDrop: true, // 拖進視窗的檔案交給前端 OnFileDrop 開啟

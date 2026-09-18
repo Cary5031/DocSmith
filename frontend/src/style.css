@@ -1483,3 +1483,63 @@ body.busy * {
   color: inherit;
   border-radius: 2px;
 }
+
+/* ---- 自訂標題列（顏色跟著介面主題）---- */
+.titlebar {
+  --wails-draggable: drag;
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding-left: 10px;
+  background: var(--toolbar-bg);
+  color: var(--text);
+  user-select: none;
+}
+
+.titlebar-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+}
+
+.titlebar-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.window-controls {
+  --wails-draggable: no-drag;
+  display: flex;
+  height: 100%;
+}
+
+.window-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 100%;
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: default;
+}
+
+.window-control:hover {
+  background: var(--hover);
+}
+
+.window-control.close:hover {
+  background: #e81123;
+  color: #fff;
+}
+
+/* 標題列與工具列之間不需要分隔線，視覺上連成一塊 */
+.toolbar {
+  --wails-draggable: no-drag;
+}
