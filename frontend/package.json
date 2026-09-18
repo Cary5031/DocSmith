@@ -24,6 +24,7 @@
     "@wasm-fmt/clang-format": "^23.1.1",
     "@wasm-fmt/ruff_fmt": "^0.15.20",
     "codemirror": "^6.0.2",
+    "diff": "^9.0.0",
     "docx": "^9.7.1",
     "dompurify": "^3.4.15",
     "highlight.js": "^11.12.0",

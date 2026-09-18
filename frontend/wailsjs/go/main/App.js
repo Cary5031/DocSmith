@@ -6,6 +6,10 @@ export function ApplyUpdate() {
   return window['go']['main']['App']['ApplyUpdate']();
 }
 
+export function CancelAIChat(arg1) {
+  return window['go']['main']['App']['CancelAIChat'](arg1);
+}
+
 export function CheckForUpdate() {
   return window['go']['main']['App']['CheckForUpdate']();
 }
@@ -140,6 +144,10 @@ export function SetTitleBarDark(arg1) {
 
 export function ShowDefaultAppDialog() {
   return window['go']['main']['App']['ShowDefaultAppDialog']();
+}
+
+export function StartAIChat(arg1, arg2) {
+  return window['go']['main']['App']['StartAIChat'](arg1, arg2);
 }
 
 export function TestAIConnection(arg1) {

@@ -6,7 +6,7 @@ import {
   List, ListOrdered, ListTodo, TextQuote,
   Code, SquareCode, Link, Image, Table, Minus,
   PenLine, Columns2, Eye, Languages, Sigma, Plus, X, FileDown, FileText, FileOutput, Sun, Moon, Monitor, Square, Copy,
-  WandSparkles, Settings,
+  WandSparkles, Settings, Bot,
 } from 'lucide';
 import {
   GetStartupFiles, LoadSettings, SaveSettings, OpenFileDialog, SaveFileDialog,
@@ -33,6 +33,8 @@ import { initSearch, focusSearch } from './search.js';
 import { initSession, restoreSession, recoverBackups } from './session.js';
 import { formatDocument } from './format.js';
 import { initAISettings, openAISettings } from './ai/settings.js';
+import { initAIPanel, toggleAIPanel } from './ai/panel.js';
+import { GetAIConfig } from '../wailsjs/go/main/App';
 import { EditorView } from '@codemirror/view';
 
 const $ = (id) => document.getElementById(id);
@@ -896,6 +898,11 @@ function buildToolbar() {
   }
   bar.append(modes);
 
+  const aiButton = iconButton(Bot, 'aiToggle', () => toggleAIPanel());
+  aiButton.id = 'mdb-ai-toggle';
+  aiButton.classList.add('tool-ai');
+  bar.append(aiButton);
+
   const settingsButton = iconButton(Settings, 'settings', () => openAISettings());
   bar.append(settingsButton);
 
@@ -947,6 +954,7 @@ document.addEventListener(
       s: e.shiftKey ? saveAs : save,
       w: () => closeTab(),
       f: e.shiftKey ? focusSearch : null, // Ctrl+F 交給編輯器 / 閱讀器，Ctrl+Shift+F 全文搜尋
+      a: e.shiftKey ? () => toggleAIPanel() : null, // Ctrl+Shift+A 開關 AI 面板
       tab: () => cycleTab(e.shiftKey ? -1 : 1),
     };
     if (actions[k]) {
@@ -1141,6 +1149,36 @@ export const app = {
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: content } });
     return tab;
   },
+  // 在游標處插入文字（AI 回覆的套用）
+  insertText(text) {
+    if (!isEditorKind(active.kind)) return;
+    const pos = view.state.selection.main.head;
+    view.dispatch({ changes: { from: pos, insert: text }, selection: { anchor: pos + text.length }, userEvent: 'input.ai' });
+    view.focus();
+  },
+  // 取代目前選取的範圍（沒有選取時等於插入）
+  replaceSelection(text) {
+    if (!isEditorKind(active.kind)) return;
+    const sel = view.state.selection.main;
+    view.dispatch({ changes: { from: sel.from, to: sel.to, insert: text }, selection: { anchor: sel.from + text.length }, userEvent: 'input.ai' });
+    view.focus();
+  },
+  // 取代整份文件內容（可用 Ctrl+Z 復原）
+  replaceDocument(text) {
+    if (!isEditorKind(active.kind)) return;
+    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text }, userEvent: 'input.ai' });
+    view.focus();
+  },
+  // 把內容開成新的未存檔分頁
+  async openDraft(content, kind = 'markdown') {
+    const tab = await openAsTab({ kind }, content);
+    tab.savedDoc = (await editor.createState('', kind)).doc;
+    tab.dirty = true;
+    syncGlobalDirty();
+    updateTitle();
+    renderTabs();
+    return tab;
+  },
   // 選取編輯器中的範圍並捲到畫面中間
   selectRange(from, to) {
     view.dispatch({ selection: { anchor: from, head: to }, effects: EditorView.scrollIntoView(from, { y: 'center' }) });
@@ -1186,6 +1224,15 @@ async function init() {
   initSession(app);
   initAISettings(app);
   await initSidebar(app);
+  // 公司政策停用 AI 時，隱藏 AI 按鈕與面板
+  let aiDisabled = false;
+  try {
+    aiDisabled = (await GetAIConfig()).policy.disabled;
+  } catch {
+    /* 設定讀取失敗時仍顯示按鈕 */
+  }
+  if (aiDisabled) $('mdb-ai-toggle').hidden = true;
+  await initAIPanel(app, aiDisabled);
   await restoreSession();
   for (const path of await GetStartupFiles()) await openPath(path);
   await recoverBackups();
