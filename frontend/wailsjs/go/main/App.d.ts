@@ -6,6 +6,10 @@ export function ApplyUpdate():Promise<void>;
 
 export function CheckForUpdate():Promise<main.UpdateCheck>;
 
+export function ClearBackups():Promise<void>;
+
+export function DeleteBackup(arg1:string):Promise<void>;
+
 export function ExportDialog(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
 export function ExportPDF(arg1:string,arg2:string):Promise<void>;
@@ -17,6 +21,8 @@ export function GetVersion():Promise<string>;
 export function ImportTargets(arg1:string,arg2:Array<string>):Promise<main.ImportTarget>;
 
 export function IsDefaultMarkdownApp():Promise<boolean>;
+
+export function ListBackups():Promise<Array<string>>;
 
 export function ListDir(arg1:string):Promise<Array<main.DirEntry>>;
 
@@ -54,8 +60,12 @@ export function SetDirty(arg1:boolean):Promise<void>;
 
 export function SetDocPath(arg1:string):Promise<void>;
 
+export function SetTitleBarDark(arg1:boolean):Promise<void>;
+
 export function ShowDefaultAppDialog():Promise<void>;
 
 export function WasUpdated():Promise<boolean>;
+
+export function WriteBackup(arg1:string,arg2:string):Promise<void>;
 
 export function WriteBase64File(arg1:string,arg2:string):Promise<void>;

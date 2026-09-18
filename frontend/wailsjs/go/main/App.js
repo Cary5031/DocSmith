@@ -10,6 +10,14 @@ export function CheckForUpdate() {
   return window['go']['main']['App']['CheckForUpdate']();
 }
 
+export function ClearBackups() {
+  return window['go']['main']['App']['ClearBackups']();
+}
+
+export function DeleteBackup(arg1) {
+  return window['go']['main']['App']['DeleteBackup'](arg1);
+}
+
 export function ExportDialog(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ExportDialog'](arg1, arg2, arg3, arg4);
 }
@@ -32,6 +40,10 @@ export function ImportTargets(arg1, arg2) {
 
 export function IsDefaultMarkdownApp() {
   return window['go']['main']['App']['IsDefaultMarkdownApp']();
+}
+
+export function ListBackups() {
+  return window['go']['main']['App']['ListBackups']();
 }
 
 export function ListDir(arg1) {
@@ -106,12 +118,20 @@ export function SetDocPath(arg1) {
   return window['go']['main']['App']['SetDocPath'](arg1);
 }
 
+export function SetTitleBarDark(arg1) {
+  return window['go']['main']['App']['SetTitleBarDark'](arg1);
+}
+
 export function ShowDefaultAppDialog() {
   return window['go']['main']['App']['ShowDefaultAppDialog']();
 }
 
 export function WasUpdated() {
   return window['go']['main']['App']['WasUpdated']();
+}
+
+export function WriteBackup(arg1, arg2) {
+  return window['go']['main']['App']['WriteBackup'](arg1, arg2);
 }
 
 export function WriteBase64File(arg1, arg2) {
