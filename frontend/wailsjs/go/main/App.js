@@ -30,6 +30,10 @@ export function FormatGo(arg1) {
   return window['go']['main']['App']['FormatGo'](arg1);
 }
 
+export function GetAIConfig() {
+  return window['go']['main']['App']['GetAIConfig']();
+}
+
 export function GetStartupFiles() {
   return window['go']['main']['App']['GetStartupFiles']();
 }
@@ -44,6 +48,10 @@ export function ImportTargets(arg1, arg2) {
 
 export function IsDefaultMarkdownApp() {
   return window['go']['main']['App']['IsDefaultMarkdownApp']();
+}
+
+export function ListAIModels(arg1) {
+  return window['go']['main']['App']['ListAIModels'](arg1);
 }
 
 export function ListBackups() {
@@ -94,6 +102,10 @@ export function ResolvePath(arg1) {
   return window['go']['main']['App']['ResolvePath'](arg1);
 }
 
+export function SaveAIConfig(arg1) {
+  return window['go']['main']['App']['SaveAIConfig'](arg1);
+}
+
 export function SaveFile(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['SaveFile'](arg1, arg2, arg3, arg4, arg5);
 }
@@ -128,6 +140,10 @@ export function SetTitleBarDark(arg1) {
 
 export function ShowDefaultAppDialog() {
   return window['go']['main']['App']['ShowDefaultAppDialog']();
+}
+
+export function TestAIConnection(arg1) {
+  return window['go']['main']['App']['TestAIConnection'](arg1);
 }
 
 export function WasUpdated() {

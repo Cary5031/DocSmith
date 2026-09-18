@@ -1,5 +1,172 @@
 export namespace main {
 	
+	export class AIPolicy {
+	    disabled: boolean;
+	    allowedProviders: string[];
+	    lockedBaseUrl: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AIPolicy(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.disabled = source["disabled"];
+	        this.allowedProviders = source["allowedProviders"];
+	        this.lockedBaseUrl = source["lockedBaseUrl"];
+	    }
+	}
+	export class AIHeader {
+	    name: string;
+	    value: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AIHeader(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.value = source["value"];
+	    }
+	}
+	export class AIProviderView {
+	    baseUrl: string;
+	    model: string;
+	    keyHint: string;
+	    headers: AIHeader[];
+	
+	    static createFrom(source: any = {}) {
+	        return new AIProviderView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.baseUrl = source["baseUrl"];
+	        this.model = source["model"];
+	        this.keyHint = source["keyHint"];
+	        this.headers = this.convertValues(source["headers"], AIHeader);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class AIConfigView {
+	    active: string;
+	    accepted: boolean;
+	    providers: Record<string, AIProviderView>;
+	    policy: AIPolicy;
+	    defaults: Record<string, string>;
+	
+	    static createFrom(source: any = {}) {
+	        return new AIConfigView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.active = source["active"];
+	        this.accepted = source["accepted"];
+	        this.providers = this.convertValues(source["providers"], AIProviderView, true);
+	        this.policy = this.convertValues(source["policy"], AIPolicy);
+	        this.defaults = source["defaults"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
+	
+	export class AISaveRequest {
+	    active: string;
+	    provider: string;
+	    baseUrl: string;
+	    model: string;
+	    key: string;
+	    headers: AIHeader[];
+	    accepted: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new AISaveRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.active = source["active"];
+	        this.provider = source["provider"];
+	        this.baseUrl = source["baseUrl"];
+	        this.model = source["model"];
+	        this.key = source["key"];
+	        this.headers = this.convertValues(source["headers"], AIHeader);
+	        this.accepted = source["accepted"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class AITestResult {
+	    ok: boolean;
+	    latency: number;
+	    models: number;
+	    message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AITestResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ok = source["ok"];
+	        this.latency = source["latency"];
+	        this.models = source["models"];
+	        this.message = source["message"];
+	    }
+	}
 	export class DirEntry {
 	    name: string;
 	    path: string;

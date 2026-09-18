@@ -6,7 +6,7 @@ import {
   List, ListOrdered, ListTodo, TextQuote,
   Code, SquareCode, Link, Image, Table, Minus,
   PenLine, Columns2, Eye, Languages, Sigma, Plus, X, FileDown, FileText, FileOutput, Sun, Moon, Monitor, Square, Copy,
-  WandSparkles,
+  WandSparkles, Settings,
 } from 'lucide';
 import {
   GetStartupFiles, LoadSettings, SaveSettings, OpenFileDialog, SaveFileDialog,
@@ -32,6 +32,7 @@ import { initSidebar } from './sidebar.js';
 import { initSearch, focusSearch } from './search.js';
 import { initSession, restoreSession, recoverBackups } from './session.js';
 import { formatDocument } from './format.js';
+import { initAISettings, openAISettings } from './ai/settings.js';
 import { EditorView } from '@codemirror/view';
 
 const $ = (id) => document.getElementById(id);
@@ -895,6 +896,9 @@ function buildToolbar() {
   }
   bar.append(modes);
 
+  const settingsButton = iconButton(Settings, 'settings', () => openAISettings());
+  bar.append(settingsButton);
+
   const theme = iconButton(Monitor, 'theme_system_app', cycleTheme);
   theme.id = 'mdb-theme';
   theme.classList.add('theme-toggle');
@@ -1180,6 +1184,7 @@ async function init() {
   await addTab();
   initSearch(app);
   initSession(app);
+  initAISettings(app);
   await initSidebar(app);
   await restoreSession();
   for (const path of await GetStartupFiles()) await openPath(path);

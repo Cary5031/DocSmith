@@ -16,6 +16,8 @@ export function ExportPDF(arg1:string,arg2:string):Promise<void>;
 
 export function FormatGo(arg1:string):Promise<string>;
 
+export function GetAIConfig():Promise<main.AIConfigView>;
+
 export function GetStartupFiles():Promise<Array<string>>;
 
 export function GetVersion():Promise<string>;
@@ -23,6 +25,8 @@ export function GetVersion():Promise<string>;
 export function ImportTargets(arg1:string,arg2:Array<string>):Promise<main.ImportTarget>;
 
 export function IsDefaultMarkdownApp():Promise<boolean>;
+
+export function ListAIModels(arg1:main.AISaveRequest):Promise<Array<string>>;
 
 export function ListBackups():Promise<Array<string>>;
 
@@ -48,6 +52,8 @@ export function ReadFileBase64(arg1:string):Promise<string>;
 
 export function ResolvePath(arg1:string):Promise<string>;
 
+export function SaveAIConfig(arg1:main.AISaveRequest):Promise<void>;
+
 export function SaveFile(arg1:string,arg2:string,arg3:boolean,arg4:boolean,arg5:string):Promise<void>;
 
 export function SaveFileDialog(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
@@ -65,6 +71,8 @@ export function SetDocPath(arg1:string):Promise<void>;
 export function SetTitleBarDark(arg1:boolean):Promise<void>;
 
 export function ShowDefaultAppDialog():Promise<void>;
+
+export function TestAIConnection(arg1:main.AISaveRequest):Promise<main.AITestResult>;
 
 export function WasUpdated():Promise<boolean>;
 
