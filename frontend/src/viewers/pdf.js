@@ -290,6 +290,7 @@ export const pdfViewer = {
     switch (e.key) {
       case 'f':
       case 'F':
+        if (e.shiftKey) return false; // Ctrl+Shift+F 是全文搜尋
         ctx.ui.find.focus();
         ctx.ui.find.select();
         return true;

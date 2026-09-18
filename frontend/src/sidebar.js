@@ -109,6 +109,11 @@ function initResizer() {
 }
 
 // ---- 檔案總管 ----
+// 目前開啟的資料夾（給全文搜尋使用）
+export function explorerRoot() {
+  return explorer.root;
+}
+
 const explorer = {
   root: null,
   expanded: new Set(), // 展開中的資料夾（正規化路徑）

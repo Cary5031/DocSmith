@@ -48,6 +48,8 @@ export function SaveSettings(arg1:main.Settings):Promise<void>;
 
 export function SaveState(arg1:string,arg2:string):Promise<void>;
 
+export function SearchFolder(arg1:string,arg2:main.SearchOptions,arg3:Array<string>):Promise<main.SearchResult>;
+
 export function SetDirty(arg1:boolean):Promise<void>;
 
 export function SetDocPath(arg1:string):Promise<void>;

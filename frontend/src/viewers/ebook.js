@@ -372,7 +372,7 @@ function isTyping(e) {
 function handleKey(ctx, e) {
   const ctrl = e.ctrlKey || e.metaKey;
   if (ctrl) {
-    if (e.key === 'f' || e.key === 'F') {
+    if ((e.key === 'f' || e.key === 'F') && !e.shiftKey) {
       if (ctx.side.hidden || ctx.sideMode !== 'search') toggleSide(ctx, 'search');
       else ctx.focusSearch?.();
       return true;

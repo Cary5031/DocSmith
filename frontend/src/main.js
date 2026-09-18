@@ -26,6 +26,7 @@ import { kindOf, isEditorKind, CONVERTIBLE_EXT } from './kinds.js';
 import { pdfViewer } from './viewers/pdf.js';
 import { ebookViewer } from './viewers/ebook.js';
 import { initSidebar } from './sidebar.js';
+import { initSearch, focusSearch } from './search.js';
 import { EditorView } from '@codemirror/view';
 
 const $ = (id) => document.getElementById(id);
@@ -849,6 +850,7 @@ document.addEventListener(
       o: () => openFile(),
       s: e.shiftKey ? saveAs : save,
       w: () => closeTab(),
+      f: e.shiftKey ? focusSearch : null, // Ctrl+F 交給編輯器 / 閱讀器，Ctrl+Shift+F 全文搜尋
       tab: () => cycleTab(e.shiftKey ? -1 : 1),
     };
     if (actions[k]) {
@@ -1004,6 +1006,11 @@ export const app = {
   on(event, fn) {
     (listeners[event] ??= []).push(fn);
   },
+  // 選取編輯器中的範圍並捲到畫面中間
+  selectRange(from, to) {
+    view.dispatch({ selection: { anchor: from, head: to }, effects: EditorView.scrollIntoView(from, { y: 'center' }) });
+    view.focus();
+  },
   // 編輯器跳到指定行（1 起算）並捲到上方
   gotoLine(n) {
     if (!isEditorKind(active.kind)) return;
@@ -1039,6 +1046,7 @@ async function init() {
   applyTheme();
 
   await addTab();
+  initSearch(app);
   await initSidebar(app);
   for (const path of await GetStartupFiles()) await openPath(path);
   if (await WasUpdated()) {

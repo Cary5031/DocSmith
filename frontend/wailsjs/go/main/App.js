@@ -94,6 +94,10 @@ export function SaveState(arg1, arg2) {
   return window['go']['main']['App']['SaveState'](arg1, arg2);
 }
 
+export function SearchFolder(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SearchFolder'](arg1, arg2, arg3);
+}
+
 export function SetDirty(arg1) {
   return window['go']['main']['App']['SetDirty'](arg1);
 }

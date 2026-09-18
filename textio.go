@@ -38,13 +38,9 @@ func looksBinary(b []byte) bool {
 	return bytes.IndexByte(b, 0) >= 0
 }
 
-// ReadFile 讀取文字檔：支援 UTF-8（含 BOM）、UTF-16（有 BOM）、Big5；二進位檔回傳錯誤。
-func (a *App) ReadFile(path string) (*Document, error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	doc := &Document{Path: path, Encoding: "UTF-8"}
+// decodeText 把檔案內容解碼成字串：支援 UTF-8（含 BOM）、UTF-16（有 BOM）、Big5；二進位檔回傳 errBinaryFile。
+func decodeText(b []byte) (*Document, error) {
+	doc := &Document{Encoding: "UTF-8"}
 	switch {
 	case bytes.HasPrefix(b, utf8BOM):
 		doc.BOM = true
@@ -77,6 +73,20 @@ func (a *App) ReadFile(path string) (*Document, error) {
 	s := string(b)
 	doc.CRLF = strings.Contains(s, "\r\n")
 	doc.Content = strings.ReplaceAll(s, "\r\n", "\n")
+	return doc, nil
+}
+
+// ReadFile 讀取文字檔（編碼判斷見 decodeText）。
+func (a *App) ReadFile(path string) (*Document, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	doc, err := decodeText(b)
+	if err != nil {
+		return nil, err
+	}
+	doc.Path = path
 	return doc, nil
 }
 
