@@ -10,7 +10,7 @@
 
 ```powershell
 wails dev          # 開發模式
-.\publish.ps1      # 產生 buildin\DocSmith.exe
+.\publish.ps1      # 產生 build\bin\DocSmith.exe
 ```
 
 產品名稱與 GitHub repo 集中在 `names.go` 與 `frontend/src/i18n.js` 的 `appName`，改名只需修改這兩處。
