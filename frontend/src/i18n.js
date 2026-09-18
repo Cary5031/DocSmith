@@ -85,6 +85,19 @@ const messages = {
     notTextFile: '「{name}」不是文字檔，無法開啟。',
     convertToMarkdown: '轉為 Markdown（開成新分頁）',
     convertToMarkdownShort: '轉為 Markdown',
+    pdfThumbnails: '縮圖',
+    prevPage: '上一頁',
+    nextPage: '下一頁',
+    zoomIn: '放大 (Ctrl++)',
+    zoomOut: '縮小 (Ctrl+-)',
+    zoomAuto: '自動',
+    zoomPageWidth: '符合頁寬',
+    zoomPageFit: '整頁',
+    findPlaceholder: '搜尋… (Ctrl+F)',
+    findPrev: '上一個 (Shift+Enter)',
+    findNext: '下一個 (Enter)',
+    findNoResult: '找不到',
+    pdfStatus: '第 {page} / {total} 頁   {zoom}%',
   },
   en: {
     appName: 'DocSmith',
@@ -171,6 +184,19 @@ const messages = {
     notTextFile: '"{name}" is not a text file and cannot be opened.',
     convertToMarkdown: 'Convert to Markdown (opens a new tab)',
     convertToMarkdownShort: 'Convert to Markdown',
+    pdfThumbnails: 'Thumbnails',
+    prevPage: 'Previous page',
+    nextPage: 'Next page',
+    zoomIn: 'Zoom in (Ctrl++)',
+    zoomOut: 'Zoom out (Ctrl+-)',
+    zoomAuto: 'Automatic',
+    zoomPageWidth: 'Page width',
+    zoomPageFit: 'Whole page',
+    findPlaceholder: 'Find… (Ctrl+F)',
+    findPrev: 'Previous (Shift+Enter)',
+    findNext: 'Next (Enter)',
+    findNoResult: 'No results',
+    pdfStatus: 'Page {page} / {total}   {zoom}%',
   },
 };
 
@@ -204,6 +230,9 @@ export function t(key, params = {}) {
 export function applyToDom(root = document) {
   root.querySelectorAll('[data-i18n]').forEach((el) => {
     el.textContent = t(el.dataset.i18n);
+  });
+  root.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
   });
   root.querySelectorAll('[data-i18n-title]').forEach((el) => {
     el.title = t(el.dataset.i18nTitle);

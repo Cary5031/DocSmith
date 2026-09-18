@@ -22,6 +22,7 @@ import { renderPreview, lineAnchors } from './preview.js';
 import { buildHtml, buildDocx } from './export.js';
 import { importDocument } from './importer.js';
 import { kindOf, isEditorKind, CONVERTIBLE_EXT } from './kinds.js';
+import { pdfViewer } from './viewers/pdf.js';
 
 const $ = (id) => document.getElementById(id);
 const workspace = $('mdb-workspace');
@@ -40,11 +41,8 @@ let tabSeq = 0;
 let viewMode = 'split'; // Markdown 分頁的檢視模式
 let settings = { language: '', defaultPrompt: '' };
 
-// 閱讀器（PDF、電子書）由各自的模組註冊：{ open(tab, container, path), status(tab), destroy(tab), onActivate?(tab) }
-const viewers = {};
-export function registerViewer(kind, viewer) {
-  viewers[kind] = viewer;
-}
+// 閱讀器（PDF、電子書）：{ open(tab, container, path, app), status(tab), destroy(tab), onActivate?(tab), onKey?(tab, e) }
+const viewers = { pdf: pdfViewer };
 
 const editor = createEditor($('mdb-editor'), {
   onChange: () => {
@@ -355,8 +353,12 @@ async function removeTab(tab) {
   if (index < 0) return;
   tabs.splice(index, 1);
   if (tab.viewerEl) {
-    viewers[tab.kind]?.destroy?.(tab);
     tab.viewerEl.remove();
+    try {
+      viewers[tab.kind]?.destroy?.(tab);
+    } catch (err) {
+      console.error(err);
+    }
   }
   if (!tabs.length) {
     await addTab();
@@ -453,7 +455,7 @@ async function openPath(path) {
     }
     const tab = await openAsTab({ path, kind });
     try {
-      await viewers[kind].open(tab, tab.viewerEl, path);
+      await viewers[kind].open(tab, tab.viewerEl, path, app);
     } catch (err) {
       await removeTab(tab);
       await showError(t('openFailed', { error: String(err?.message ?? err) }));
@@ -772,6 +774,12 @@ document.addEventListener(
     // 擋掉會讓 WebView 重新整理而遺失內容的按鍵
     if (e.key === 'F5' || (ctrl && k === 'r')) {
       e.preventDefault();
+      return;
+    }
+    // 閱讀器分頁的快捷鍵（搜尋、縮放）
+    if (active && !isEditorKind(active.kind) && viewers[active.kind]?.onKey?.(active, e)) {
+      e.preventDefault();
+      e.stopPropagation();
       return;
     }
     if (!ctrl || e.altKey) return;

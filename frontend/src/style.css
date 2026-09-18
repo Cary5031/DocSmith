@@ -731,3 +731,140 @@ body.busy * {
   border-color: var(--accent);
   color: #fff;
 }
+
+/* ---- 閱讀器共用工具列 ---- */
+.viewer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--toolbar-bg);
+  flex-wrap: wrap;
+}
+
+.viewer-toolbar .tool {
+  width: 30px;
+  height: 28px;
+}
+
+.viewer-sep {
+  width: 1px;
+  height: 20px;
+  margin: 0 6px;
+  background: var(--border);
+}
+
+.viewer-page {
+  width: 56px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  text-align: center;
+}
+
+.viewer-total {
+  color: var(--muted);
+  margin-right: 4px;
+}
+
+.viewer-zoom {
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.viewer-find {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--muted);
+}
+
+.viewer-find input {
+  width: 170px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+
+.viewer-find-count {
+  min-width: 40px;
+  font-size: 12px;
+  text-align: right;
+}
+
+.viewer-body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* ---- PDF ---- */
+.pdf-container {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  background: #e9ecef;
+}
+
+.pdf-thumbs:not([hidden]) + .pdf-container {
+  left: 150px;
+}
+
+.pdf-thumbs {
+  width: 150px;
+  overflow-y: auto;
+  padding: 10px 0;
+  border-right: 1px solid var(--border);
+  background: var(--toolbar-bg);
+}
+
+.pdf-thumbs[hidden] {
+  display: none;
+}
+
+.pdf-thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 6px 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.pdf-thumb canvas {
+  width: 110px;
+  min-height: 140px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.pdf-thumb.current canvas {
+  outline: 3px solid var(--accent);
+}
+
+.pdf-container .pdfViewer .page {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
