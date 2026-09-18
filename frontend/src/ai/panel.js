@@ -199,6 +199,7 @@ async function tabText(tab) {
 async function buildContextMessage() {
   const parts = [];
   const notes = [];
+  let chars = 0;
   for (const tab of app.tabs) {
     if (!selected.has(tab.id)) continue;
     let text = null;
@@ -211,6 +212,10 @@ async function buildContextMessage() {
       notes.push(t('aiContextSkipped', { name: app.fileName(tab.path) }));
       continue;
     }
+    if (!text.trim()) {
+      notes.push(t('aiContextEmpty', { name: app.fileName(tab.path) }));
+      continue;
+    }
     let truncated = false;
     if (text.length > MAX_DOC_CHARS) {
       text = text.slice(0, MAX_DOC_CHARS);
@@ -218,12 +223,17 @@ async function buildContextMessage() {
       notes.push(t('aiContextTruncated', { name: app.fileName(tab.path) }));
     }
     const fence = text.includes('```') ? '````' : '```';
+    chars += text.length;
     parts.push(`### ${app.fileName(tab.path)}${truncated ? t('aiTruncatedMark') : ''}\n${fence}\n${text}\n${fence}`);
   }
-  if (notes.length) setNotice(notes.join(' '));
-  else setNotice('');
-  if (!parts.length) return null;
-  return { role: 'user', content: `${t('aiContextIntro')}\n\n${parts.join('\n\n')}` };
+  if (!parts.length) {
+    setNotice(notes.join(' '));
+    return null;
+  }
+  // 讓使用者看得到這次真的送了多少內容出去
+  notes.unshift(t('aiContextSent', { count: parts.length, chars: chars.toLocaleString() }));
+  setNotice(notes.join(' '));
+  return `${t('aiContextIntro')}\n\n${parts.join('\n\n')}`;
 }
 
 function setNotice(text) {
@@ -268,10 +278,25 @@ function renderMessage(message, index) {
     item.textContent = message.content;
     return item;
   }
+  // 思考過程：答案還沒出現時自動展開，答案開始出現後收合
+  if (message.think?.trim()) {
+    const details = document.createElement('details');
+    details.className = 'ai-think';
+    details.open = message.thinkOpen ?? !message.content.trim();
+    const summary = document.createElement('summary');
+    summary.textContent = t('aiThinkTitle');
+    // 只記使用者自己的點擊；程式設定 open 也會發出 toggle 事件，不能用它判斷
+    summary.addEventListener('click', () => (message.thinkOpen = !details.open));
+    const text = document.createElement('div');
+    text.className = 'ai-think-text';
+    text.textContent = message.think;
+    details.append(summary, text);
+    item.append(details);
+  }
   const body = document.createElement('div');
   body.className = 'markdown-body ai-markdown';
   if (message.content.trim()) renderPreview(body, message.content);
-  else body.innerHTML = `<p class="ai-typing">${t('aiThinking')}</p>`;
+  else if (!message.think?.trim()) body.innerHTML = `<p class="ai-typing">${t('aiThinking')}</p>`;
   item.append(body);
   if (message.error) return item;
 
@@ -334,7 +359,10 @@ async function send(prompt, mode = 'chat') {
     .filter((m) => !m.error)
     .slice(-MAX_HISTORY)
     .map(({ role, content }) => ({ role, content }));
-  const request = [systemMessage(), ...(context ? [context] : []), ...history];
+  // 文件內容併進「這一次的問題」同一則訊息：有些服務會合併或丟掉連續的 user 訊息，
+  // 分開送會讓模型看不到文件。
+  if (context) history[history.length - 1].content = `${context}\n\n---\n\n${prompt}`;
+  const request = [systemMessage(), ...history];
   const id = `chat-${Date.now()}`;
   messages.push({ role: 'assistant', content: '', mode, done: false });
   streaming = { id, index: messages.length - 1, mode };
@@ -442,6 +470,12 @@ export async function initAIPanel(appApi, disabled = false) {
     if (streaming?.id !== id) return;
     const message = messages[streaming.index];
     message.content += text;
+    renderMessages(true);
+  });
+  EventsOn('ai:think', (id, text) => {
+    if (streaming?.id !== id) return;
+    const message = messages[streaming.index];
+    message.think = (message.think ?? '') + text;
     renderMessages(true);
   });
   EventsOn('ai:done', (id) => {

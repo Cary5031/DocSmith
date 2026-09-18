@@ -32,18 +32,20 @@ var (
 
 // StartAIChat 開始一次串流對話；id 由前端指定，用來取消與對應事件。
 func (a *App) StartAIChat(id string, messages []AIMessage) error {
-	ar, err := resolveRequest(AISaveRequest{Key: keepSecret})
+	ar, err := resolveRequest(AISaveRequest{Key: keepSecret, Thinking: keepSecret})
 	if err != nil {
 		return err
 	}
 	if ar.model == "" {
 		return fmt.Errorf("AI_NO_MODEL")
 	}
-	payload, err := json.Marshal(map[string]any{
+	body := map[string]any{
 		"model":    ar.model,
 		"messages": messages,
 		"stream":   true,
-	})
+	}
+	applyThinking(body, ar)
+	payload, err := json.Marshal(body)
 	if err != nil {
 		return err
 	}
@@ -75,6 +77,38 @@ func (a *App) StartAIChat(id string, messages []AIMessage) error {
 	return nil
 }
 
+// applyThinking 依供應商把思考模式寫進請求；未設定時什麼都不加，
+// 避免不支援這些參數的服務（例如公司自架的舊版閘道）直接回 400。
+//
+//	OpenAI / Gemini / 自訂：reasoning_effort = none / low / medium / high / xhigh / max
+//	DeepSeek：thinking.type = disabled / enabled，再以 reasoning_effort 指定 low / high / max
+func applyThinking(body map[string]any, ar *aiRequest) {
+	if ar.thinking == "" {
+		return
+	}
+	if ar.provider == "deepseek" {
+		if ar.thinking == "off" {
+			body["thinking"] = map[string]any{"type": "disabled"}
+			return
+		}
+		body["thinking"] = map[string]any{"type": "enabled"}
+		switch ar.thinking {
+		case "low":
+			body["reasoning_effort"] = "low"
+		case "high":
+			body["reasoning_effort"] = "high"
+		case "xhigh", "max":
+			body["reasoning_effort"] = "max" // DeepSeek 最高只到 max
+		}
+		return
+	}
+	if ar.thinking == "off" {
+		body["reasoning_effort"] = "none"
+		return
+	}
+	body["reasoning_effort"] = ar.thinking
+}
+
 // CancelAIChat 停止產生。
 func (a *App) CancelAIChat(id string) {
 	chatMu.Lock()
@@ -103,9 +137,15 @@ func (a *App) streamChat(ctx context.Context, ar *aiRequest, payload []byte, id 
 	}
 
 	reader := bufio.NewReaderSize(res.Body, 64*1024)
-	var pending strings.Builder // 累積一小段再送，避免事件過於頻繁
+	var pending strings.Builder  // 累積一小段再送，避免事件過於頻繁
+	var thinking strings.Builder // 思考內容（reasoning_content）另外送，前端可收合
 	lastFlush := time.Now()
 	flush := func() {
+		if thinking.Len() > 0 {
+			runtime.EventsEmit(a.ctx, "ai:think", id, thinking.String())
+			thinking.Reset()
+			lastFlush = time.Now()
+		}
 		if pending.Len() > 0 {
 			runtime.EventsEmit(a.ctx, "ai:delta", id, pending.String())
 			pending.Reset()
@@ -125,10 +165,14 @@ func (a *App) streamChat(ctx context.Context, ar *aiRequest, payload []byte, id 
 				var chunk struct {
 					Choices []struct {
 						Delta struct {
-							Content string `json:"content"`
+							Content          string `json:"content"`
+							ReasoningContent string `json:"reasoning_content"` // DeepSeek
+							Reasoning        string `json:"reasoning"`         // 部分閘道（LiteLLM、OpenRouter 等）
 						} `json:"delta"`
 						Message struct {
-							Content string `json:"content"`
+							Content          string `json:"content"`
+							ReasoningContent string `json:"reasoning_content"`
+							Reasoning        string `json:"reasoning"`
 						} `json:"message"`
 					} `json:"choices"`
 					Error struct {
@@ -148,9 +192,23 @@ func (a *App) streamChat(ctx context.Context, ar *aiRequest, payload []byte, id 
 						if text != "" {
 							pending.WriteString(text)
 						}
+						think := c.Delta.ReasoningContent
+						if think == "" {
+							think = c.Delta.Reasoning
+						}
+						if think == "" {
+							think = c.Message.ReasoningContent
+						}
+						if think == "" {
+							think = c.Message.Reasoning
+						}
+						if think != "" {
+							thinking.WriteString(think)
+						}
 					}
 					// 累積夠多、或距上次送出已超過 120 毫秒就送，讓逐字顯示保持順暢
-					if pending.Len() > 160 || (pending.Len() > 0 && time.Since(lastFlush) > 120*time.Millisecond) {
+					buffered := pending.Len() + thinking.Len()
+					if buffered > 160 || (buffered > 0 && time.Since(lastFlush) > 120*time.Millisecond) {
 						flush()
 					}
 				}

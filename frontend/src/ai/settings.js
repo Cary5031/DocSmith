@@ -50,6 +50,7 @@ function draftOf(id) {
     key: config.providers[id]?.keyHint ? KEEP : '',
     keyHint: config.providers[id]?.keyHint ?? '',
     headers: (config.providers[id]?.headers ?? []).map((h) => ({ name: h.name, value: KEEP, hint: h.value })),
+    thinking: config.providers[id]?.thinking ?? '',
     models: [],
   };
   return drafts[id];
@@ -64,6 +65,7 @@ function requestFor(id) {
     model: d.model,
     key: d.key,
     headers: d.headers.filter((h) => h.name.trim()).map((h) => ({ name: h.name, value: h.value })),
+    thinking: d.thinking,
     accepted: false,
   };
 }
@@ -145,6 +147,12 @@ function build() {
   fetchModels.append(createElement(RefreshCw, { width: 15, height: 15 }), document.createTextNode(` ${t('aiFetchModels')}`));
   fetchModels.addEventListener('click', loadModels);
 
+  // 思考模式：空字串代表不指定，請求裡就不會出現任何思考參數
+  const thinking = document.createElement('select');
+  thinking.addEventListener('change', () => (draftOf(current).thinking = thinking.value));
+  const thinkingNote = document.createElement('span');
+  thinkingNote.className = 'form-hint';
+
   const headers = document.createElement('div');
   headers.className = 'ai-headers';
   const addHeader = document.createElement('button');
@@ -183,13 +191,14 @@ function build() {
     row('aiBaseUrl', baseUrl),
     row('aiApiKey', key, reveal, clearKey),
     row('aiModel', model, models, fetchModels),
+    row('aiThinkingMode', thinking, thinkingNote),
     row('aiHeaders', headers, addHeader),
     result,
     actions,
   );
   root.append(box);
   document.body.append(root);
-  ui = { provider, baseUrl, key, model, models, headers, result, policyNote, test, save };
+  ui = { provider, baseUrl, key, model, models, thinking, thinkingNote, headers, result, policyNote, test, save };
   root.addEventListener('mousedown', (e) => {
     if (e.target === root) close();
   });
@@ -223,6 +232,17 @@ function renderHeaders() {
   );
 }
 
+// 思考模式選項：值為空字串時請求不帶任何思考參數
+const THINKING = [
+  ['', 'aiThinkingDefault'],
+  ['off', 'aiThinkingOff'],
+  ['low', 'aiThinkingLow'],
+  ['medium', 'aiThinkingMedium'],
+  ['high', 'aiThinkingHigh'],
+  ['xhigh', 'aiThinkingXHigh'],
+  ['max', 'aiThinkingMax'],
+];
+
 function render() {
   const policy = config.policy;
   const allowed = policy.allowedProviders?.length ? policy.allowedProviders : PROVIDERS.map(([id]) => id);
@@ -241,6 +261,9 @@ function render() {
   ui.key.placeholder = d.key === KEEP ? `${d.keyHint} ${t('aiSavedValue')}` : t('aiApiKeyPlaceholder');
   ui.model.value = d.model;
   ui.models.replaceChildren(...d.models.map((m) => new Option(m)));
+  ui.thinking.replaceChildren(...THINKING.map(([value, key]) => new Option(t(key), value)));
+  ui.thinking.value = d.thinking ?? '';
+  ui.thinkingNote.textContent = t('aiThinkingHint');
   renderHeaders();
 
   const notes = [];

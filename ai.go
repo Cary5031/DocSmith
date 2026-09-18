@@ -33,10 +33,11 @@ type AIHeader struct {
 }
 
 type AIProvider struct {
-	BaseURL string     `json:"baseUrl"`
-	Model   string     `json:"model"`
-	Key     string     `json:"key"` // 存檔時為加密字串；不回傳前端
-	Headers []AIHeader `json:"headers"`
+	BaseURL  string     `json:"baseUrl"`
+	Model    string     `json:"model"`
+	Key      string     `json:"key"` // 存檔時為加密字串；不回傳前端
+	Headers  []AIHeader `json:"headers"`
+	Thinking string     `json:"thinking"` // 思考模式："" 不指定 / off / low / medium / high
 }
 
 type AIConfig struct {
@@ -47,10 +48,11 @@ type AIConfig struct {
 
 // AIProviderView 是回傳給前端的內容（不含金鑰明文）。
 type AIProviderView struct {
-	BaseURL string     `json:"baseUrl"`
-	Model   string     `json:"model"`
-	KeyHint string     `json:"keyHint"` // 例如 sk-…abcd；沒有金鑰時為空
-	Headers []AIHeader `json:"headers"` // 值為遮罩
+	BaseURL  string     `json:"baseUrl"`
+	Model    string     `json:"model"`
+	KeyHint  string     `json:"keyHint"` // 例如 sk-…abcd；沒有金鑰時為空
+	Headers  []AIHeader `json:"headers"` // 值為遮罩
+	Thinking string     `json:"thinking"`
 }
 
 type AIPolicy struct {
@@ -221,7 +223,7 @@ func (a *App) GetAIConfig() *AIConfigView {
 	policy := aiPolicy()
 	view := &AIConfigView{Active: cfg.Active, Accepted: cfg.Accepted, Providers: map[string]*AIProviderView{}, Policy: policy, Defaults: aiDefaults}
 	for id, p := range cfg.Providers {
-		pv := &AIProviderView{BaseURL: p.BaseURL, Model: p.Model, KeyHint: maskSecret(decryptSecret(p.Key))}
+		pv := &AIProviderView{BaseURL: p.BaseURL, Model: p.Model, KeyHint: maskSecret(decryptSecret(p.Key)), Thinking: p.Thinking}
 		for _, h := range p.Headers {
 			pv.Headers = append(pv.Headers, AIHeader{Name: h.Name, Value: maskSecret(decryptSecret(h.Value))})
 		}
@@ -256,6 +258,7 @@ type AISaveRequest struct {
 	Key      string     `json:"key"`
 	Headers  []AIHeader `json:"headers"`
 	Accepted bool       `json:"accepted"`
+	Thinking string     `json:"thinking"`
 }
 
 // SaveAIConfig 儲存單一供應商的設定。
@@ -276,7 +279,7 @@ func (a *App) SaveAIConfig(req AISaveRequest) error {
 	if old == nil {
 		old = &AIProvider{}
 	}
-	p := &AIProvider{BaseURL: strings.TrimSpace(req.BaseURL), Model: strings.TrimSpace(req.Model)}
+	p := &AIProvider{BaseURL: strings.TrimSpace(req.BaseURL), Model: strings.TrimSpace(req.Model), Thinking: normalizeThinking(req.Thinking)}
 	switch req.Key {
 	case keepSecret:
 		p.Key = old.Key
@@ -316,6 +319,16 @@ type aiRequest struct {
 	model    string
 	key      string
 	headers  []AIHeader
+	thinking string // "" / off / low / medium / high
+}
+
+// 思考模式只接受固定幾個值，其他一律視為「不指定」。
+func normalizeThinking(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "off", "low", "medium", "high", "xhigh", "max":
+		return strings.ToLower(strings.TrimSpace(v))
+	}
+	return ""
 }
 
 // resolveRequest 把前端傳來的草稿與已儲存的祕密合併。
@@ -338,7 +351,10 @@ func resolveRequest(req AISaveRequest) (*aiRequest, error) {
 	if saved == nil {
 		saved = &AIProvider{}
 	}
-	out := &aiRequest{provider: id, baseURL: strings.TrimSpace(req.BaseURL), model: strings.TrimSpace(req.Model)}
+	out := &aiRequest{provider: id, baseURL: strings.TrimSpace(req.BaseURL), model: strings.TrimSpace(req.Model), thinking: normalizeThinking(req.Thinking)}
+	if req.Thinking == keepSecret {
+		out.thinking = saved.Thinking // 對話呼叫沿用已儲存的設定
+	}
 	if out.baseURL == "" {
 		out.baseURL = saved.BaseURL
 	}

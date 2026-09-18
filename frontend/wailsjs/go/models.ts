@@ -35,6 +35,7 @@ export namespace main {
 	    model: string;
 	    keyHint: string;
 	    headers: AIHeader[];
+	    thinking: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AIProviderView(source);
@@ -46,6 +47,7 @@ export namespace main {
 	        this.model = source["model"];
 	        this.keyHint = source["keyHint"];
 	        this.headers = this.convertValues(source["headers"], AIHeader);
+	        this.thinking = source["thinking"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -129,6 +131,7 @@ export namespace main {
 	    key: string;
 	    headers: AIHeader[];
 	    accepted: boolean;
+	    thinking: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AISaveRequest(source);
@@ -143,6 +146,7 @@ export namespace main {
 	        this.key = source["key"];
 	        this.headers = this.convertValues(source["headers"], AIHeader);
 	        this.accepted = source["accepted"];
+	        this.thinking = source["thinking"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

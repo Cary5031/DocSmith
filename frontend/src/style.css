@@ -1973,3 +1973,38 @@ body[data-kind="ebook"] .tool-group[data-role="tools"] {
 .diff-same {
   color: var(--muted);
 }
+
+/* ---- AI 思考過程 ---- */
+.ai-think {
+  margin-bottom: 8px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--code-bg);
+  font-size: 12.5px;
+}
+
+.ai-think > summary {
+  padding: 5px 9px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.ai-think[open] > summary {
+  border-bottom: 1px dashed var(--border);
+}
+
+.ai-think-text {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 7px 9px;
+  color: var(--muted);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.form-hint {
+  align-self: center;
+  color: var(--muted);
+  font-size: 12px;
+}
