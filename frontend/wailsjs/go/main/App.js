@@ -38,6 +38,10 @@ export function LoadSettings() {
   return window['go']['main']['App']['LoadSettings']();
 }
 
+export function LoadState(arg1) {
+  return window['go']['main']['App']['LoadState'](arg1);
+}
+
 export function OpenFileDialog(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['OpenFileDialog'](arg1, arg2, arg3, arg4);
 }
@@ -72,6 +76,10 @@ export function SaveFileDialog(arg1, arg2, arg3, arg4) {
 
 export function SaveSettings(arg1) {
   return window['go']['main']['App']['SaveSettings'](arg1);
+}
+
+export function SaveState(arg1, arg2) {
+  return window['go']['main']['App']['SaveState'](arg1, arg2);
 }
 
 export function SetDirty(arg1) {

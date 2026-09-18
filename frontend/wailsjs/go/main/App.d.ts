@@ -20,6 +20,8 @@ export function IsDefaultMarkdownApp():Promise<boolean>;
 
 export function LoadSettings():Promise<main.Settings>;
 
+export function LoadState(arg1:string):Promise<string>;
+
 export function OpenFileDialog(arg1:string,arg2:string,arg3:string,arg4:string):Promise<Array<string>>;
 
 export function OpenWithDefaultApp(arg1:string):Promise<void>;
@@ -37,6 +39,8 @@ export function SaveFile(arg1:string,arg2:string,arg3:boolean,arg4:boolean,arg5:
 export function SaveFileDialog(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
 export function SaveSettings(arg1:main.Settings):Promise<void>;
+
+export function SaveState(arg1:string,arg2:string):Promise<void>;
 
 export function SetDirty(arg1:boolean):Promise<void>;
 

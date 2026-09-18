@@ -23,6 +23,7 @@ import { buildHtml, buildDocx } from './export.js';
 import { importDocument } from './importer.js';
 import { kindOf, isEditorKind, CONVERTIBLE_EXT } from './kinds.js';
 import { pdfViewer } from './viewers/pdf.js';
+import { ebookViewer } from './viewers/ebook.js';
 
 const $ = (id) => document.getElementById(id);
 const workspace = $('mdb-workspace');
@@ -42,7 +43,7 @@ let viewMode = 'split'; // Markdown 分頁的檢視模式
 let settings = { language: '', defaultPrompt: '' };
 
 // 閱讀器（PDF、電子書）：{ open(tab, container, path, app), status(tab), destroy(tab), onActivate?(tab), onKey?(tab, e) }
-const viewers = { pdf: pdfViewer };
+const viewers = { pdf: pdfViewer, ebook: ebookViewer };
 
 const editor = createEditor($('mdb-editor'), {
   onChange: () => {
@@ -57,8 +58,10 @@ function fileName(path) {
   return path ? path.split(/[\\/]/).pop() : t('untitled');
 }
 
+// Windows 路徑不分大小寫，\ 與 / 視為相同
 function samePath(a, b) {
-  return a && b && a.toLowerCase() === b.toLowerCase();
+  const norm = (p) => p.replace(/\\/g, '/').toLowerCase();
+  return Boolean(a && b) && norm(a) === norm(b);
 }
 
 function updateTitle() {
