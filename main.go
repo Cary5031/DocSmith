@@ -15,6 +15,10 @@ var assets embed.FS
 
 func main() {
 	prepareAfterUpdate()
+	// 只執行一個程式：再次開啟檔案時交給既有視窗開成新分頁（見 singleinstance.go）
+	if !ensureSingleInstance() {
+		return
+	}
 	app := NewApp()
 
 	err := wails.Run(&options.App{
@@ -34,11 +38,6 @@ func main() {
 		EnableDefaultContextMenu: true, // 讓編輯區可以右鍵剪下 / 複製 / 貼上
 		DragAndDrop: &options.DragAndDrop{
 			EnableFileDrop: true, // 拖進視窗的檔案交給前端 OnFileDrop 開啟
-		},
-		// 只執行一個程式：再次雙擊 .md 時交給既有視窗開成新分頁
-		SingleInstanceLock: &options.SingleInstanceLock{
-			UniqueId:               instanceLock,
-			OnSecondInstanceLaunch: app.onSecondInstance,
 		},
 		OnStartup:     app.startup,
 		OnBeforeClose: app.beforeClose,

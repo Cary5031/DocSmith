@@ -37,6 +37,7 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	setSecondInstanceHandler(a.onSecondInstance)
 	// 註冊 .md 檔案關聯（HKCU），失敗不影響使用
 	go registerFileAssociations()
 }
