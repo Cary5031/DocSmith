@@ -32,7 +32,7 @@ export function ReadFileBase64(arg1:string):Promise<string>;
 
 export function ResolvePath(arg1:string):Promise<string>;
 
-export function SaveFile(arg1:string,arg2:string,arg3:boolean,arg4:boolean):Promise<void>;
+export function SaveFile(arg1:string,arg2:string,arg3:boolean,arg4:boolean,arg5:string):Promise<void>;
 
 export function SaveFileDialog(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 

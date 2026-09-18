@@ -6,7 +6,7 @@ import {
   Bold, Italic, Strikethrough, Heading1, Heading2, Heading3,
   List, ListOrdered, ListTodo, TextQuote,
   Code, SquareCode, Link, Image, Table, Minus,
-  PenLine, Columns2, Eye, Languages, Sigma, Plus, X, FileDown, FileText,
+  PenLine, Columns2, Eye, Languages, Sigma, Plus, X, FileDown, FileText, FileOutput,
 } from 'lucide';
 import {
   GetStartupFiles, LoadSettings, SaveSettings, OpenFileDialog, SaveFileDialog,
@@ -17,30 +17,39 @@ import {
 } from '../wailsjs/go/main/App';
 import { EventsOn, OnFileDrop, WindowSetTitle, BrowserOpenURL } from '../wailsjs/runtime/runtime';
 import { t, setLanguage, getLanguage, detectLanguage, languages, applyToDom } from './i18n.js';
-import { createEditor, commands } from './editor.js';
+import { createEditor, commands, languageName } from './editor.js';
 import { renderPreview, lineAnchors } from './preview.js';
 import { buildHtml, buildDocx } from './export.js';
-import { IMPORTABLE, UNSUPPORTED, importDocument } from './importer.js';
+import { importDocument } from './importer.js';
+import { kindOf, isEditorKind, CONVERTIBLE_EXT } from './kinds.js';
 
 const $ = (id) => document.getElementById(id);
 const workspace = $('mdb-workspace');
 const previewScroll = $('mdb-preview-scroll');
 const preview = $('mdb-preview');
+const viewerHost = $('mdb-viewer');
 const tabBar = $('mdb-tabs');
 
 // ---- 分頁狀態 ----
-// 所有分頁共用同一個編輯器，每個分頁保存自己的 EditorState（內容、游標、復原紀錄）與捲動位置。
-// 作用中分頁的最新狀態永遠在 view.state，切換時才寫回 tab.state。
+// 每個分頁有類型（kind）：markdown / text 使用共用的編輯器，各自保存 EditorState（內容、游標、復原紀錄）；
+// pdf / ebook 使用各自的閱讀器元件（viewers[kind]），切換分頁時隱藏 / 顯示。
+// 作用中編輯器分頁的最新狀態永遠在 view.state，切換時才寫回 tab.state。
 let tabs = [];
 let active = null;
 let tabSeq = 0;
-let viewMode = 'split';
+let viewMode = 'split'; // Markdown 分頁的檢視模式
 let settings = { language: '', defaultPrompt: '' };
+
+// 閱讀器（PDF、電子書）由各自的模組註冊：{ open(tab, container, path), status(tab), destroy(tab), onActivate?(tab) }
+const viewers = {};
+export function registerViewer(kind, viewer) {
+  viewers[kind] = viewer;
+}
 
 const editor = createEditor($('mdb-editor'), {
   onChange: () => {
     updateDirty();
-    scheduleRender();
+    if (active?.kind === 'markdown') scheduleRender();
   },
   onCursor: updateStatusInfo,
 });
@@ -63,6 +72,7 @@ function syncGlobalDirty() {
 }
 
 function updateDirty() {
+  if (!isEditorKind(active?.kind)) return;
   const now = !view.state.doc.eq(active.savedDoc);
   if (now === active.dirty) return;
   active.dirty = now;
@@ -72,10 +82,17 @@ function updateDirty() {
 }
 
 function updateStatusInfo() {
+  if (!active) return;
+  $('mdb-status-path').textContent = active.path || t('untitled');
+  if (!isEditorKind(active.kind)) {
+    $('mdb-status-info').textContent = viewers[active.kind]?.status(active) ?? '';
+    return;
+  }
   const pos = view.state.selection.main.head;
   const line = view.state.doc.lineAt(pos);
-  $('mdb-status-path').textContent = active.path || t('untitled');
+  const type = active.kind === 'markdown' ? 'Markdown' : (languageName(active.path) ?? t('plainText'));
   $('mdb-status-info').textContent = [
+    type,
     active.encoding,
     active.crlf ? 'CRLF' : 'LF',
     t('lineCol', { line: line.number, col: pos - line.from + 1 }),
@@ -90,7 +107,13 @@ function flashMessage(text) {
   messageTimer = setTimeout(() => (el.textContent = ''), 2500);
 }
 
-// ---- 預覽 ----
+function setBusy(message) {
+  clearTimeout(messageTimer);
+  $('mdb-status-message').textContent = message ?? '';
+  document.body.classList.toggle('busy', Boolean(message));
+}
+
+// ---- 預覽（只有 Markdown 分頁）----
 let renderTimer;
 let anchorsCache = null;
 
@@ -101,6 +124,7 @@ function scheduleRender() {
 
 function render(sync = true) {
   clearTimeout(renderTimer);
+  if (active?.kind !== 'markdown') return;
   const source = view.state.doc.toString();
   if (source.trim() === '') {
     preview.innerHTML = `<p class="empty-hint">${t('emptyPreview')}</p>`;
@@ -121,7 +145,7 @@ function anchors() {
   return anchorsCache;
 }
 
-// ---- 同步捲動（分割模式）----
+// ---- 同步捲動（Markdown 分割模式）----
 // 以「使用者目前操作的那一邊」為主，帶動另一邊，避免兩邊互相觸發
 let scrollLeader = 'editor';
 
@@ -149,7 +173,7 @@ function interpolate(list, value, fromIdx, toIdx) {
 }
 
 function syncScroll(source) {
-  if (viewMode !== 'split') return;
+  if (active?.kind !== 'markdown' || viewMode !== 'split') return;
   const sc = view.scrollDOM;
   const list = anchors();
   if (source === 'editor') {
@@ -209,7 +233,7 @@ function showModal(title, message, buttons, cancelValue = 'cancel') {
       modal.hidden = true;
       modalOpen = false;
       document.removeEventListener('keydown', onKey, true);
-      view.focus();
+      if (isEditorKind(active?.kind)) view.focus();
       resolve(value);
     };
     const onKey = (e) => {
@@ -237,7 +261,7 @@ function showError(message) {
 // 分頁有未存變更時先切過去再詢問；回傳 true 表示可以繼續（已存檔或放棄變更）
 async function confirmDiscard(tab) {
   if (!tab.dirty) return true;
-  activate(tab);
+  await activate(tab);
   const answer = await showModal(t('unsavedTitle'), t('unsavedMessage', { name: fileName(tab.path) }), [
     { label: t('btnSave'), value: 'save', primary: true },
     { label: t('btnDiscard'), value: 'discard' },
@@ -248,66 +272,96 @@ async function confirmDiscard(tab) {
 }
 
 // ---- 分頁 ----
-function createTab(info, content) {
-  const state = editor.createState(content);
-  return {
+async function createTab(info, content) {
+  const kind = info.kind ?? kindOf(info.path);
+  const tab = {
     id: ++tabSeq,
     path: '',
     encoding: 'UTF-8',
     crlf: false,
     bom: false,
     ...info,
-    state,
-    savedDoc: state.doc,
+    kind,
     dirty: false,
     editorScroll: 0,
     previewScroll: 0,
   };
+  if (isEditorKind(kind)) {
+    tab.state = await editor.createState(content ?? '', kind, tab.path);
+    tab.savedDoc = tab.state.doc;
+  } else {
+    tab.viewerEl = document.createElement('div');
+    tab.viewerEl.className = 'viewer';
+    tab.viewerEl.hidden = true;
+    viewerHost.append(tab.viewerEl);
+  }
+  return tab;
 }
 
-// 空白、未命名、未修改的分頁：開檔時直接被取代
+// 空白、未命名、未修改的 Markdown 分頁：開檔時直接被取代
 function isPristine(tab) {
+  if (tab.kind !== 'markdown') return false;
   const doc = tab === active ? view.state.doc : tab.state.doc;
   return !tab.path && !tab.dirty && doc.length === 0;
 }
 
-function activate(tab) {
+// 依分頁類型切換版面與工具列可用狀態
+function applyLayout() {
+  const kind = active.kind;
+  document.body.dataset.kind = kind;
+  const mode = kind === 'markdown' ? viewMode : isEditorKind(kind) ? 'edit' : 'viewer';
+  workspace.className = `workspace mode-${mode}`;
+  document.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('active', kind === 'markdown' && b.dataset.view === viewMode));
+  $('mdb-convert').hidden = !(active.path && CONVERTIBLE_EXT.test(active.path));
+  for (const tab of tabs) if (tab.viewerEl) tab.viewerEl.hidden = tab !== active;
+}
+
+async function activate(tab) {
   if (tab === active) return;
-  if (active && tabs.includes(active)) {
+  if (active && tabs.includes(active) && isEditorKind(active.kind)) {
     active.state = view.state;
     active.editorScroll = view.scrollDOM.scrollTop;
     active.previewScroll = previewScroll.scrollTop;
   }
   active = tab;
-  view.setState(tab.state);
+  applyLayout();
   SetDocPath(tab.path);
   updateTitle();
-  updateStatusInfo();
   renderTabs();
-  render(false);
-  const { editorScroll, previewScroll: pvScroll } = tab;
-  requestAnimationFrame(() => {
-    view.scrollDOM.scrollTop = editorScroll;
-    previewScroll.scrollTop = pvScroll;
-  });
-  view.focus();
+  if (isEditorKind(tab.kind)) {
+    view.setState(tab.state);
+    render(false);
+    const { editorScroll, previewScroll: pvScroll } = tab;
+    requestAnimationFrame(() => {
+      view.scrollDOM.scrollTop = editorScroll;
+      previewScroll.scrollTop = pvScroll;
+    });
+    view.focus();
+  } else {
+    viewers[tab.kind]?.onActivate?.(tab);
+  }
+  updateStatusInfo();
 }
 
-function addTab(info = {}, content = '') {
-  const tab = createTab(info, content);
+async function addTab(info = {}, content = '') {
+  const tab = await createTab(info, content);
   tabs.push(tab);
-  activate(tab);
+  await activate(tab);
   return tab;
 }
 
-function removeTab(tab) {
+async function removeTab(tab) {
   const index = tabs.indexOf(tab);
   if (index < 0) return;
   tabs.splice(index, 1);
+  if (tab.viewerEl) {
+    viewers[tab.kind]?.destroy?.(tab);
+    tab.viewerEl.remove();
+  }
   if (!tabs.length) {
-    addTab();
+    await addTab();
   } else if (tab === active) {
-    activate(tabs[Math.min(index, tabs.length - 1)]);
+    await activate(tabs[Math.min(index, tabs.length - 1)]);
   }
   syncGlobalDirty();
   renderTabs();
@@ -315,7 +369,7 @@ function removeTab(tab) {
 
 async function closeTab(tab = active) {
   if (!(await confirmDiscard(tab))) return false;
-  removeTab(tab);
+  await removeTab(tab);
   return true;
 }
 
@@ -330,6 +384,7 @@ function renderTabs() {
     el.className = 'tab' + (tab === active ? ' active' : '') + (tab.dirty ? ' dirty' : '');
     el.title = tab.path || t('untitled');
     el.dataset.tabId = tab.id;
+    el.dataset.kind = tab.kind;
     const name = document.createElement('span');
     name.className = 'tab-name';
     name.textContent = fileName(tab.path);
@@ -364,62 +419,86 @@ function renderTabs() {
 
 // ---- 檔案操作 ----
 function newFile() {
-  addTab();
+  return addTab();
 }
 
-// 開啟檔案成為分頁；已開啟則切換過去；目前是空白分頁則取代它；Word / Excel 等文件自動轉換
+// 開成新分頁；目前是空白分頁則取代它
+async function openAsTab(info, content) {
+  const reuse = active && isPristine(active) ? active : null;
+  const tab = await addTab(info, content);
+  if (reuse) await removeTab(reuse);
+  return tab;
+}
+
+// 開啟檔案成為分頁；已開啟則切換過去；Word / Excel 等文件自動轉換；PDF、電子書用閱讀器開啟
 async function openPath(path) {
   const existing = tabs.find((tab) => samePath(tab.path, path));
   if (existing) {
-    activate(existing);
+    await activate(existing);
     return;
   }
-  if (UNSUPPORTED.test(path)) {
+  const kind = kindOf(path);
+  if (kind === 'unsupported') {
     await showError(t('unsupportedFormat', { name: fileName(path) }));
     return;
   }
-  if (IMPORTABLE.test(path)) {
+  if (kind === 'office') {
     await importPath(path);
+    return;
+  }
+  if (!isEditorKind(kind)) {
+    if (!viewers[kind]) {
+      await showError(t('unsupportedFile', { name: fileName(path) }));
+      return;
+    }
+    const tab = await openAsTab({ path, kind });
+    try {
+      await viewers[kind].open(tab, tab.viewerEl, path);
+    } catch (err) {
+      await removeTab(tab);
+      await showError(t('openFailed', { error: String(err?.message ?? err) }));
+      return;
+    }
+    updateStatusInfo();
     return;
   }
   let d;
   try {
     d = await ReadFile(path);
   } catch (err) {
-    await showError(t('openFailed', { error: String(err) }));
+    const message = String(err?.message ?? err);
+    await showError(message.includes('BINARY_FILE') ? t('notTextFile', { name: fileName(path) }) : t('openFailed', { error: message }));
     return;
   }
-  const reuse = active && isPristine(active) ? active : null;
-  addTab({ path: d.path, encoding: d.encoding, crlf: d.crlf, bom: d.bom }, d.content);
-  if (reuse) removeTab(reuse);
+  await openAsTab({ path: d.path, encoding: d.encoding, crlf: d.crlf, bom: d.bom }, d.content);
 }
 
 // 轉換文件成 Markdown，開成未存檔的新分頁（預設存到原檔旁的「原檔名.md」）
 async function importPath(path) {
-  document.body.classList.add('busy');
-  clearTimeout(messageTimer);
-  $('mdb-status-message').textContent = t('importing');
+  setBusy(t('importing'));
   let result;
   try {
     const target = await ImportTargets(path, tabs.map((tab) => tab.path).filter(Boolean));
     result = { path: target.markdownPath, markdown: await importDocument(path, target, { slide: t('slide') }) };
   } catch (err) {
-    $('mdb-status-message').textContent = '';
+    setBusy(null);
     await showError(t('importFailed', { name: fileName(path), error: String(err?.message ?? err) }));
     return;
-  } finally {
-    document.body.classList.remove('busy');
   }
-  const reuse = active && isPristine(active) ? active : null;
-  const tab = addTab({ path: result.path }, result.markdown);
-  if (reuse) removeTab(reuse);
+  setBusy(null);
+  const tab = await openAsTab({ path: result.path, kind: 'markdown' }, result.markdown);
   // 尚未存檔：以空白內容當作「已存」基準，分頁會顯示未存檔
-  tab.savedDoc = editor.createState('').doc;
+  tab.savedDoc = (await editor.createState('', 'markdown')).doc;
   tab.dirty = true;
   syncGlobalDirty();
   updateTitle();
   renderTabs();
   flashMessage(t('importedFrom', { name: fileName(path) }));
+}
+
+// 「轉為 Markdown」：PDF、HTML、CSV 分頁
+function convertActive() {
+  if (active.path && CONVERTIBLE_EXT.test(active.path)) importPath(active.path);
 }
 
 async function openFile(path) {
@@ -431,15 +510,17 @@ async function openFile(path) {
 
 async function writeTo(path) {
   const tab = active;
+  // UTF-16 檔案存回 UTF-16；其他（含 Big5 開啟的檔案）一律存成 UTF-8
+  const encoding = tab.encoding.startsWith('UTF-16') ? tab.encoding : 'UTF-8';
   try {
-    await SaveFile(path, view.state.doc.toString(), tab.crlf, tab.bom);
+    await SaveFile(path, view.state.doc.toString(), tab.crlf, tab.bom, encoding);
   } catch (err) {
     await showError(t('saveFailed', { error: String(err) }));
     return false;
   }
   const pathChanged = path !== tab.path;
   tab.path = path;
-  tab.encoding = 'UTF-8'; // 存檔一律為 UTF-8（Big5 開啟的檔案存檔後即轉為 UTF-8）
+  tab.encoding = encoding;
   tab.savedDoc = view.state.doc;
   tab.dirty = false;
   syncGlobalDirty();
@@ -455,25 +536,27 @@ async function writeTo(path) {
 }
 
 async function save() {
+  if (!isEditorKind(active.kind)) return true;
   return active.path ? writeTo(active.path) : saveAs();
 }
 
 async function saveAs() {
+  if (!isEditorKind(active.kind)) return false;
   const defaultName = active.path ? fileName(active.path) : `${t('untitled')}.md`;
   const path = await SaveFileDialog(t('dialogSaveTitle'), defaultName, t('markdownFiles'), t('allFiles'));
   if (!path) return false;
   // 另存成另一個已開啟的檔案時，關掉那個舊分頁，避免同一檔案開兩次
   const duplicate = tabs.find((tab) => tab !== active && samePath(tab.path, path));
   const ok = await writeTo(path);
-  if (ok && duplicate) removeTab(duplicate);
+  if (ok && duplicate) await removeTab(duplicate);
   return ok;
 }
 
-// ---- 匯出 PDF / Word ----
+// ---- 匯出 PDF / Word（Markdown 分頁）----
 let exporting = false;
 
 async function exportAs(kind) {
-  if (exporting) return;
+  if (exporting || active.kind !== 'markdown') return;
   const ext = kind === 'pdf' ? 'pdf' : 'docx';
   const base = active.path ? fileName(active.path).replace(/\.[^.]+$/, '') : t('untitled');
   const path = await ExportDialog(
@@ -484,10 +567,7 @@ async function exportAs(kind) {
   );
   if (!path) return;
   exporting = true;
-  document.body.classList.add('busy');
-  const status = $('mdb-status-message');
-  clearTimeout(messageTimer);
-  status.textContent = t('exporting');
+  setBusy(t('exporting'));
   let error = null;
   try {
     const source = view.state.doc.toString();
@@ -497,8 +577,7 @@ async function exportAs(kind) {
     error = err;
   } finally {
     exporting = false;
-    document.body.classList.remove('busy');
-    status.textContent = '';
+    setBusy(null);
   }
   if (error) {
     await showError(t('exportFailed', { error: String(error?.message ?? error) }));
@@ -511,11 +590,11 @@ async function exportAs(kind) {
   if (answer === 'open') OpenWithDefaultApp(path).catch((err) => showError(String(err)));
 }
 
-// ---- 檢視模式 ----
+// ---- 檢視模式（Markdown 分頁）----
 function setViewMode(mode) {
+  if (active.kind !== 'markdown') return;
   viewMode = mode;
-  workspace.className = `workspace mode-${mode}`;
-  document.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('active', b.dataset.view === mode));
+  applyLayout();
   invalidateAnchors();
   view.requestMeasure();
   if (mode !== 'preview') view.focus();
@@ -528,7 +607,7 @@ function changeLanguage(code) {
   updateTitle();
   updateStatusInfo();
   renderTabs();
-  if (view.state.doc.length === 0) render();
+  if (active.kind === 'markdown' && view.state.doc.length === 0) render();
   settings.language = code;
   SaveSettings(settings);
 }
@@ -565,40 +644,56 @@ async function promptDefaultApp() {
 $('mdb-set-default').addEventListener('click', setAsDefault);
 
 // ---- 工具列 ----
+// role：file（永遠可用）、export / format / view（只有 Markdown 分頁可用）
 const toolbarGroups = [
-  [
-    { icon: FilePlus, key: 'newFile', run: newFile },
-    { icon: FolderOpen, key: 'openFile', run: () => openFile() },
-    { icon: Save, key: 'save', run: save },
-    { icon: SaveAll, key: 'saveAs', run: saveAs },
-  ],
-  [
-    { icon: FileDown, key: 'exportPdf', run: () => exportAs('pdf') },
-    { icon: FileText, key: 'exportWord', run: () => exportAs('docx') },
-  ],
-  [
-    { icon: Bold, key: 'bold' },
-    { icon: Italic, key: 'italic' },
-    { icon: Strikethrough, key: 'strike' },
-    { icon: Heading1, key: 'h1' },
-    { icon: Heading2, key: 'h2' },
-    { icon: Heading3, key: 'h3' },
-  ],
-  [
-    { icon: List, key: 'bulletList' },
-    { icon: ListOrdered, key: 'orderedList' },
-    { icon: ListTodo, key: 'taskList' },
-    { icon: TextQuote, key: 'quote' },
-  ],
-  [
-    { icon: Code, key: 'inlineCode' },
-    { icon: SquareCode, key: 'codeBlock' },
-    { icon: Link, key: 'link' },
-    { icon: Image, key: 'image' },
-    { icon: Table, key: 'table' },
-    { icon: Minus, key: 'hr' },
-    { icon: Sigma, key: 'math' },
-  ],
+  {
+    role: 'file',
+    items: [
+      { icon: FilePlus, key: 'newFile', run: newFile },
+      { icon: FolderOpen, key: 'openFile', run: () => openFile() },
+      { icon: Save, key: 'save', run: save },
+      { icon: SaveAll, key: 'saveAs', run: saveAs },
+    ],
+  },
+  {
+    role: 'export',
+    items: [
+      { icon: FileDown, key: 'exportPdf', run: () => exportAs('pdf') },
+      { icon: FileText, key: 'exportWord', run: () => exportAs('docx') },
+    ],
+  },
+  {
+    role: 'format',
+    items: [
+      { icon: Bold, key: 'bold' },
+      { icon: Italic, key: 'italic' },
+      { icon: Strikethrough, key: 'strike' },
+      { icon: Heading1, key: 'h1' },
+      { icon: Heading2, key: 'h2' },
+      { icon: Heading3, key: 'h3' },
+    ],
+  },
+  {
+    role: 'format',
+    items: [
+      { icon: List, key: 'bulletList' },
+      { icon: ListOrdered, key: 'orderedList' },
+      { icon: ListTodo, key: 'taskList' },
+      { icon: TextQuote, key: 'quote' },
+    ],
+  },
+  {
+    role: 'format',
+    items: [
+      { icon: Code, key: 'inlineCode' },
+      { icon: SquareCode, key: 'codeBlock' },
+      { icon: Link, key: 'link' },
+      { icon: Image, key: 'image' },
+      { icon: Table, key: 'table' },
+      { icon: Minus, key: 'hr' },
+      { icon: Sigma, key: 'math' },
+    ],
+  },
 ];
 
 function iconButton(icon, key, onClick) {
@@ -614,21 +709,32 @@ function iconButton(icon, key, onClick) {
 
 function buildToolbar() {
   const bar = $('mdb-toolbar');
-  toolbarGroups.forEach((group, i) => {
+  for (const group of toolbarGroups) {
     const g = document.createElement('div');
     g.className = 'tool-group';
-    for (const item of group) {
+    g.dataset.role = group.role;
+    for (const item of group.items) {
       g.append(
         iconButton(item.icon, item.key, () => {
           if (item.run) return item.run();
+          if (active.kind !== 'markdown') return;
           if (viewMode === 'preview') setViewMode('split'); // 只預覽時按格式鈕，先切回可編輯
           commands[item.key](view);
         }),
       );
     }
     bar.append(g);
-    if (i === 0) g.classList.add('file-group');
-  });
+  }
+
+  // 「轉為 Markdown」：只在 PDF / HTML / CSV 分頁顯示
+  const convert = iconButton(FileOutput, 'convertToMarkdown', convertActive);
+  convert.id = 'mdb-convert';
+  convert.classList.add('tool-labeled');
+  const label = document.createElement('span');
+  label.dataset.i18n = 'convertToMarkdownShort';
+  convert.append(label);
+  convert.hidden = true;
+  bar.append(convert);
 
   const spacer = document.createElement('div');
   spacer.className = 'spacer';
@@ -636,6 +742,7 @@ function buildToolbar() {
 
   const modes = document.createElement('div');
   modes.className = 'tool-group segmented';
+  modes.dataset.role = 'view';
   for (const [mode, icon, key] of [['edit', PenLine, 'viewEdit'], ['split', Columns2, 'viewSplit'], ['preview', Eye, 'viewPreview']]) {
     const btn = iconButton(icon, key, () => setViewMode(mode));
     btn.dataset.view = mode;
@@ -702,22 +809,18 @@ previewScroll.addEventListener('click', async (e) => {
     BrowserOpenURL(href);
     return;
   }
-  // 相對路徑的 .md 連結：開成分頁
+  // 相對路徑的檔案連結：開成分頁
   const pathPart = decodeURIComponent(href.split('#')[0]);
-  if (/\.(md|markdown|mdown|mkd)$/i.test(pathPart)) {
+  if (pathPart) {
     const abs = await ResolvePath(pathPart);
     if (abs) openFile(abs);
   }
 });
 
-// ---- 拖放開檔 ----
-const MARKDOWN = /\.(md|markdown|mdown|mkd|txt)$/i;
-const canOpen = (p) => MARKDOWN.test(p) || IMPORTABLE.test(p) || UNSUPPORTED.test(p);
+// ---- 拖放開檔（任何檔案；不是文字檔時會提示）----
 OnFileDrop(async (_x, _y, paths) => {
   if (modalOpen || !paths?.length) return;
-  const unsupported = paths.filter((p) => !canOpen(p));
-  for (const p of paths.filter(canOpen)) await openPath(p);
-  if (unsupported.length) showError(t('unsupportedFile', { name: unsupported.map(fileName).join('、') }));
+  for (const p of paths) await openPath(p);
 }, false);
 
 // ---- 自動更新 ----
@@ -803,7 +906,7 @@ EventsOn('update-progress', (pct) => {
   $('mdb-update-bar').style.width = `${pct}%`;
 });
 
-// ---- 其他執行個體轉交的檔案（程式已開啟時又雙擊 .md）----
+// ---- 其他執行個體轉交的檔案（程式已開啟時又雙擊檔案）----
 EventsOn('open-files', async (paths) => {
   for (const path of paths ?? []) await openPath(path);
 });
@@ -817,6 +920,34 @@ EventsOn('close-requested', async () => {
   Quit();
 });
 
+// ---- 給其他模組（閱讀器、側欄、AI）使用的介面 ----
+export const app = {
+  get tabs() {
+    return tabs;
+  },
+  get active() {
+    return active;
+  },
+  view,
+  editor,
+  t,
+  fileName,
+  openPath,
+  openFile,
+  openAsTab,
+  activate,
+  updateStatusInfo,
+  flashMessage,
+  setBusy,
+  showModal,
+  showError,
+  // 取得任一編輯器分頁目前的文字（作用中的分頁以 view.state 為準）
+  textOf(tab) {
+    if (!isEditorKind(tab.kind)) return null;
+    return (tab === active ? view.state.doc : tab.state.doc).toString();
+  },
+};
+
 // ---- 啟動 ----
 async function init() {
   buildToolbar();
@@ -825,9 +956,8 @@ async function init() {
   $('mdb-language').value = lang;
   setLanguage(lang);
   applyToDom();
-  setViewMode('split');
 
-  addTab();
+  await addTab();
   for (const path of await GetStartupFiles()) await openPath(path);
   if (await WasUpdated()) {
     showUpdateToast({ title: t('updatedTo', { version: await GetVersion() }), buttons: [{ label: t('btnOk'), primary: true, run: hideUpdateToast }] });

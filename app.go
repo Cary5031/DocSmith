@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -10,24 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"unicode/utf8"
 
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
-	"golang.org/x/text/encoding/traditionalchinese"
 )
-
-var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
-
-// Document 是開啟檔案後回傳給前端的內容。
-// Content 一律以 "\n" 換行；原檔的換行格式與 BOM 記在 CRLF / BOM，存檔時還原。
-type Document struct {
-	Path     string `json:"path"`
-	Content  string `json:"content"`
-	Encoding string `json:"encoding"`
-	CRLF     bool   `json:"crlf"`
-	BOM      bool   `json:"bom"`
-}
 
 // Settings 是使用者偏好，存在 %APPDATA%\DocSmith\settings.json
 type Settings struct {
@@ -156,7 +141,8 @@ func markdownFilters(filterName, allName string) []runtime.FileFilter {
 }
 
 // 可自動轉換成 Markdown 的文件格式
-const importPattern = "*.docx;*.xlsx;*.xls;*.ods;*.pptx;*.pdf;*.html;*.htm;*.csv"
+// 開啟對話框「所有支援的文件」包含的格式（任何文字檔也都能以「所有檔案」開啟）
+const supportedPattern = "*.md;*.markdown;*.mdown;*.mkd;*.txt;*.log;*.csv;*.tsv;*.json;*.yaml;*.yml;*.xml;*.html;*.htm;*.css;*.js;*.ts;*.jsx;*.tsx;*.py;*.go;*.cs;*.java;*.c;*.cpp;*.h;*.hpp;*.rs;*.php;*.rb;*.sql;*.ps1;*.sh;*.bat;*.ini;*.toml;*.docx;*.xlsx;*.xls;*.ods;*.pptx;*.pdf;*.epub;*.mobi;*.azw3;*.fb2;*.cbz"
 
 // OpenFileDialog 顯示開啟檔案對話框（可多選），取消時回傳空陣列。
 func (a *App) OpenFileDialog(title, supportedName, filterName, allName string) ([]string, error) {
@@ -164,7 +150,7 @@ func (a *App) OpenFileDialog(title, supportedName, filterName, allName string) (
 		Title:            title,
 		DefaultDirectory: a.docDir(),
 		Filters: append([]runtime.FileFilter{
-			{DisplayName: supportedName, Pattern: "*.md;*.markdown;*.mdown;*.mkd;*.txt;" + importPattern},
+			{DisplayName: supportedName, Pattern: supportedPattern},
 		}, markdownFilters(filterName, allName)...),
 	})
 }
@@ -230,42 +216,6 @@ func (a *App) SaveFileDialog(title, defaultName, filterName, allName string) (st
 		path += ".md"
 	}
 	return path, nil
-}
-
-// ReadFile 讀取文字檔。非 UTF-8 的檔案嘗試以 Big5 解碼（舊文件常見）。
-func (a *App) ReadFile(path string) (*Document, error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	doc := &Document{Path: path, Encoding: "UTF-8"}
-	if bytes.HasPrefix(b, utf8BOM) {
-		doc.BOM = true
-		b = b[len(utf8BOM):]
-	}
-	if !utf8.Valid(b) {
-		if decoded, err := traditionalchinese.Big5.NewDecoder().Bytes(b); err == nil {
-			b = decoded
-			doc.Encoding = "Big5"
-		}
-	}
-	s := string(b)
-	doc.CRLF = strings.Contains(s, "\r\n")
-	doc.Content = strings.ReplaceAll(s, "\r\n", "\n")
-	return doc, nil
-}
-
-// SaveFile 以 UTF-8 寫檔，保留原本的換行格式與 BOM。
-func (a *App) SaveFile(path, content string, crlf, bom bool) error {
-	if crlf {
-		content = strings.ReplaceAll(content, "\n", "\r\n")
-	}
-	var buf bytes.Buffer
-	if bom {
-		buf.Write(utf8BOM)
-	}
-	buf.WriteString(content)
-	return os.WriteFile(path, buf.Bytes(), 0o644)
 }
 
 func configDir() string {

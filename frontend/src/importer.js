@@ -1,9 +1,6 @@
 // 各種文件格式轉 Markdown。函式庫都延遲載入，只有用到時才會載入。
 import { ReadFile, ReadFileBase64, WriteBase64File } from '../wailsjs/go/main/App';
 
-// 可自動轉換的格式；舊版二進位 Office 格式不支援
-export const IMPORTABLE = /\.(docx|xlsx|xls|ods|pptx|pdf|html?|csv)$/i;
-export const UNSUPPORTED = /\.(doc|ppt|rtf|odt|odp)$/i;
 
 function base64ToBytes(b64) {
   const bin = atob(b64);

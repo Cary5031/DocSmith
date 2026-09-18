@@ -258,7 +258,49 @@ body {
 .mode-edit .preview-pane,
 .mode-edit .divider,
 .mode-preview .editor-pane,
-.mode-preview .divider {
+.mode-preview .divider,
+.mode-viewer .editor-pane,
+.mode-viewer .preview-pane,
+.mode-viewer .divider,
+.workspace:not(.mode-viewer) .viewer-pane {
+  display: none;
+}
+
+/* PDF / 電子書閱讀器：每個分頁一個 .viewer，只顯示作用中的那個 */
+.viewer-pane {
+  position: relative;
+  overflow: hidden;
+}
+
+.viewer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.viewer[hidden] {
+  display: none;
+}
+
+/* 非 Markdown 分頁：停用 Markdown 專用的按鈕 */
+body:not([data-kind="markdown"]) .tool-group[data-role="export"],
+body:not([data-kind="markdown"]) .tool-group[data-role="format"],
+body:not([data-kind="markdown"]) .tool-group[data-role="view"] {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.tool.tool-labeled {
+  width: auto;
+  gap: 6px;
+  padding: 0 10px;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+}
+
+.tool[hidden] {
   display: none;
 }
 

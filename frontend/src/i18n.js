@@ -81,6 +81,10 @@ const messages = {
     btnUpdateNow: '立即更新',
     btnRetry: '重試',
     btnRemindLater: '稍後',
+    plainText: '純文字',
+    notTextFile: '「{name}」不是文字檔，無法開啟。',
+    convertToMarkdown: '轉為 Markdown（開成新分頁）',
+    convertToMarkdownShort: '轉為 Markdown',
   },
   en: {
     appName: 'DocSmith',
@@ -163,6 +167,10 @@ const messages = {
     btnUpdateNow: 'Update now',
     btnRetry: 'Retry',
     btnRemindLater: 'Later',
+    plainText: 'Plain text',
+    notTextFile: '"{name}" is not a text file and cannot be opened.',
+    convertToMarkdown: 'Convert to Markdown (opens a new tab)',
+    convertToMarkdownShort: 'Convert to Markdown',
   },
 };
 

@@ -2,7 +2,7 @@ import { EditorView, basicSetup } from 'codemirror';
 import { EditorState, EditorSelection } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { indentWithTab } from '@codemirror/commands';
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { HighlightStyle, syntaxHighlighting, LanguageDescription } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
@@ -203,6 +203,9 @@ const formatKeymap = keymap.of([
   indentWithTab,
 ]);
 
+// 非 Markdown 文件只保留 Tab 縮排，不套用 Markdown 格式快捷鍵
+const indentKeymap = keymap.of([indentWithTab]);
+
 const theme = EditorView.theme({
   '&': { height: '100%', fontSize: '15px' },
   '.cm-scroller': {
@@ -236,13 +239,21 @@ const highlight = HighlightStyle.define([
   { tag: [tags.tagName, tags.propertyName, tags.attributeName], color: '#116329' },
 ]);
 
+// 依檔名找出程式語言（找不到代表純文字）
+function languageOf(path) {
+  const name = (path || '').split(/[\\/]/).pop();
+  return name ? LanguageDescription.matchFilename(languages, name) : null;
+}
+
+// 狀態列顯示用的檔案類型名稱；null 代表純文字
+export function languageName(path) {
+  return languageOf(path)?.name ?? null;
+}
+
 // 建立編輯器。onChange 在內容變動時呼叫；onCursor 在游標移動時呼叫。
 export function createEditor(parent, { onChange, onCursor }) {
-  const extensions = [
-    formatKeymap,
+  const common = [
     basicSetup,
-    markdown({ base: markdownLanguage, codeLanguages: languages }),
-    EditorView.lineWrapping,
     theme,
     syntaxHighlighting(highlight),
     // 拖進來的是檔案時不要插入內容，讓事件往上交給 Wails 開檔
@@ -254,12 +265,24 @@ export function createEditor(parent, { onChange, onCursor }) {
       if (u.selectionSet || u.docChanged) onCursor();
     }),
   ];
-  const view = new EditorView({ parent, state: EditorState.create({ doc: '', extensions }) });
+  const markdownExtensions = [formatKeymap, ...common, markdown({ base: markdownLanguage, codeLanguages: languages }), EditorView.lineWrapping];
+  const view = new EditorView({ parent, state: EditorState.create({ doc: '', extensions: markdownExtensions }) });
   return {
     view,
-    // 為新分頁建立獨立的編輯狀態（內容、游標、復原紀錄）
-    createState(content) {
-      return EditorState.create({ doc: content, extensions });
+    // 為新分頁建立獨立的編輯狀態（內容、游標、復原紀錄）。
+    // Markdown：格式快捷鍵＋自動換行；程式碼：依副檔名上色、不換行；純文字：自動換行。
+    async createState(content, kind, path) {
+      if (kind === 'markdown') return EditorState.create({ doc: content, extensions: markdownExtensions });
+      const desc = languageOf(path);
+      let language = [];
+      if (desc) {
+        try {
+          language = await desc.load();
+        } catch {
+          /* 語言模組載入失敗時當純文字 */
+        }
+      }
+      return EditorState.create({ doc: content, extensions: [indentKeymap, ...common, language, desc ? [] : EditorView.lineWrapping] });
     },
   };
 }
