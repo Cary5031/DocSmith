@@ -25,6 +25,7 @@ import { pdfViewer } from './viewers/pdf.js';
 import { ebookViewer } from './viewers/ebook.js';
 import { initSidebar } from './sidebar.js';
 import { initSearch, focusSearch } from './search.js';
+import { initSession, restoreSession, recoverBackups } from './session.js';
 import { EditorView } from '@codemirror/view';
 
 const $ = (id) => document.getElementById(id);
@@ -47,8 +48,10 @@ let settings = { language: '', defaultPrompt: '', theme: 'system' };
 // 閱讀器（PDF、電子書）：{ open(tab, container, path, app), status(tab), destroy(tab), onActivate?(tab), onKey?(tab, e) }
 const viewers = { pdf: pdfViewer, ebook: ebookViewer };
 
-// 給側欄、AI 等模組訂閱的事件：active（切換分頁）、change（內容變動）、cursor、saved（存檔路徑）、language
+// 給側欄、AI 等模組訂閱的事件：active（切換分頁）、change（內容變動）、cursor、saved（存檔路徑）、
+// tabs（分頁增減）、closed（關閉的分頁）、language
 const listeners = {};
+const quitHooks = []; // 正常結束前執行（記錄工作階段、清除備份）
 function emit(event, ...args) {
   for (const fn of listeners[event] ?? []) {
     try {
@@ -367,6 +370,7 @@ async function addTab(info = {}, content = '') {
   const tab = await createTab(info, content);
   tabs.push(tab);
   await activate(tab);
+  emit('tabs');
   return tab;
 }
 
@@ -389,6 +393,8 @@ async function removeTab(tab) {
   }
   syncGlobalDirty();
   renderTabs();
+  emit('closed', tab);
+  emit('tabs');
 }
 
 async function closeTab(tab = active) {
@@ -954,6 +960,7 @@ async function startUpdate(check) {
     if (!(await confirmDiscard(tab))) return;
   }
   updating = true;
+  for (const hook of quitHooks) await hook();
   showUpdateToast({ title: t('updateDownloading', { version: check.latest.version }), progress: 0 });
   try {
     await ApplyUpdate(); // 成功時程式會自動重新啟動
@@ -985,6 +992,13 @@ EventsOn('close-requested', async () => {
   for (const tab of [...tabs]) {
     if (!(await confirmDiscard(tab))) return;
   }
+  for (const hook of quitHooks) {
+    try {
+      await hook();
+    } catch (err) {
+      console.error(err);
+    }
+  }
   Quit();
 });
 
@@ -1002,6 +1016,37 @@ export const app = {
   t,
   on(event, fn) {
     (listeners[event] ??= []).push(fn);
+  },
+  onQuit(fn) {
+    quitHooks.push(fn);
+  },
+  // 還原備份：開啟（或切到）該檔案的分頁，內容換成備份並標示未存檔；原檔已不存在時以備份內容開成未存檔分頁
+  async openRestored(info, content) {
+    let tab = info.path ? tabs.find((x) => samePath(x.path, info.path)) : null;
+    if (tab) {
+      await activate(tab);
+    } else {
+      let disk = null;
+      if (info.path) {
+        try {
+          disk = await ReadFile(info.path);
+        } catch {
+          /* 原檔不存在 */
+        }
+      }
+      tab = await openAsTab(
+        {
+          path: info.path ?? '',
+          kind: info.kind ?? 'markdown',
+          encoding: disk?.encoding ?? info.encoding ?? 'UTF-8',
+          crlf: disk?.crlf ?? info.crlf ?? false,
+          bom: disk?.bom ?? info.bom ?? false,
+        },
+        disk?.content ?? '',
+      );
+    }
+    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: content } });
+    return tab;
   },
   // 選取編輯器中的範圍並捲到畫面中間
   selectRange(from, to) {
@@ -1044,8 +1089,11 @@ async function init() {
 
   await addTab();
   initSearch(app);
+  initSession(app);
   await initSidebar(app);
+  await restoreSession();
   for (const path of await GetStartupFiles()) await openPath(path);
+  await recoverBackups();
   if (await WasUpdated()) {
     showUpdateToast({ title: t('updatedTo', { version: await GetVersion() }), buttons: [{ label: t('btnOk'), primary: true, run: hideUpdateToast }] });
     setTimeout(hideUpdateToast, 8000);
