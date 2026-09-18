@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>DocSmith</title>
+</head>
+<body>
+<header class="toolbar" id="mdb-toolbar"></header>
+<nav class="tabbar" id="mdb-tabs"></nav>
+<main class="workspace mode-split" id="mdb-workspace">
+    <section class="pane editor-pane" id="mdb-editor"></section>
+    <div class="divider"></div>
+    <section class="pane preview-pane" id="mdb-preview-scroll">
+        <article class="markdown-body" id="mdb-preview"></article>
+    </section>
+</main>
+<footer class="statusbar">
+    <span class="status-path" id="mdb-status-path"></span>
+    <span class="status-message" id="mdb-status-message"></span>
+    <button class="status-link" id="mdb-set-default" type="button" data-i18n="setDefault" hidden></button>
+    <span class="status-info" id="mdb-status-info"></span>
+</footer>
+<div class="update-toast" id="mdb-update" role="status" hidden>
+    <div class="update-title" id="mdb-update-title"></div>
+    <div class="update-notes" id="mdb-update-notes"></div>
+    <div class="update-progress" id="mdb-update-progress" hidden><div class="update-bar" id="mdb-update-bar"></div></div>
+    <div class="update-actions" id="mdb-update-actions"></div>
+</div>
+<div class="modal-backdrop" id="mdb-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mdb-modal-title">
+        <h2 id="mdb-modal-title"></h2>
+        <p id="mdb-modal-message"></p>
+        <div class="modal-actions" id="mdb-modal-actions"></div>
+    </div>
+</div>
+<script src="./src/main.js" type="module"></script>
+</body>
+</html>

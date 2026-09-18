@@ -1,0 +1,9 @@
+{
+  "version": "0.1.0",
+  "releaseDate": "2026-09-18",
+  "downloadUrl": "https://github.com/Cary5031/DocSmith/raw/main/build/bin/DocSmith.exe",
+  "notes": {
+    "zh-TW": "DocSmith 實驗版。",
+    "en": "DocSmith experimental build."
+  }
+}

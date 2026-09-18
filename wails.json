@@ -1,0 +1,19 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "DocSmith",
+  "outputfilename": "DocSmith",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "jc_lee",
+    "email": "jc_lee@tachen.com.tw"
+  },
+  "info": {
+    "productName": "DocSmith",
+    "productVersion": "1.7.3",
+    "copyright": "",
+    "comments": "Document reader, editor and AI workbench"
+  }
+}

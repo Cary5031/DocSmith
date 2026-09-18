@@ -1,0 +1,691 @@
+:root {
+  --bg: #ffffff;
+  --text: #1f2328;
+  --muted: #6e7781;
+  --border: #d8dee4;
+  --toolbar-bg: #f6f8fa;
+  --hover: #e7ebef;
+  --active: #dbe4ff;
+  --accent: #2f6fdb;
+  --gutter-bg: #fafbfc;
+  --active-line: rgba(47, 111, 219, 0.06);
+  --code-bg: #f3f5f7;
+  --ui-font: "Segoe UI", "Microsoft JhengHei UI", "Microsoft JhengHei", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui-font);
+  font-size: 14px;
+  overflow: hidden;
+}
+
+/* ---- 工具列 ---- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  user-select: none;
+}
+
+.tool-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 6px;
+  margin-right: 2px;
+  border-right: 1px solid var(--border);
+}
+
+.tool-group:last-of-type,
+.tool-group.segmented {
+  border-right: none;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.tool:hover {
+  background: var(--hover);
+}
+
+.tool:active {
+  background: var(--active);
+}
+
+.segmented {
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.segmented .tool {
+  width: 34px;
+  height: 26px;
+}
+
+.segmented .tool.active {
+  background: var(--active);
+  color: var(--accent);
+}
+
+.lang-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding: 0 4px 0 8px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--muted);
+}
+
+.lang-select select {
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+/* ---- 分頁列 ---- */
+.tabbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 36px;
+  padding: 0 8px;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  user-select: none;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  max-width: 220px;
+  height: 30px;
+  padding: 0 4px 0 12px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 7px 7px 0 0;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tab:hover {
+  background: var(--hover);
+}
+
+.tab.active {
+  position: relative;
+  top: 1px;
+  background: var(--bg);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-close,
+.tab-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tab-close {
+  width: 20px;
+  height: 20px;
+}
+
+.tab-close:hover,
+.tab-add:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+/* 未存檔：平常顯示圓點，滑鼠移上去才顯示 × */
+.tab.dirty .tab-close svg {
+  display: none;
+}
+
+.tab.dirty .tab-close::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.tab.dirty .tab-close:hover svg {
+  display: block;
+}
+
+.tab.dirty .tab-close:hover::before {
+  display: none;
+}
+
+.tab-add {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  margin: 0 0 2px 4px;
+}
+
+/* ---- 編輯 / 預覽區 ---- */
+.workspace {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.pane {
+  flex: 1 1 50%;
+  min-width: 0;
+  height: 100%;
+}
+
+.editor-pane .cm-editor {
+  height: 100%;
+}
+
+.editor-pane .cm-editor.cm-focused {
+  outline: none;
+}
+
+.divider {
+  width: 1px;
+  background: var(--border);
+}
+
+.preview-pane {
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.mode-edit .preview-pane,
+.mode-edit .divider,
+.mode-preview .editor-pane,
+.mode-preview .divider {
+  display: none;
+}
+
+/* ---- 狀態列 ---- */
+.statusbar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  height: 26px;
+  padding: 0 12px;
+  border-top: 1px solid var(--border);
+  background: var(--toolbar-bg);
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.status-path {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-message {
+  color: var(--accent);
+}
+
+.status-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.status-link:hover {
+  text-decoration: underline;
+}
+
+.status-link[hidden] {
+  display: none;
+}
+
+.status-info {
+  white-space: pre;
+}
+
+/* ---- 對話框 ---- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.35);
+  z-index: 100;
+}
+
+.modal-backdrop[hidden] {
+  display: none;
+}
+
+.modal {
+  width: min(440px, calc(100vw - 32px));
+  padding: 20px 22px 16px;
+  background: var(--bg);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.modal h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.modal p {
+  margin: 0 0 18px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-actions button {
+  min-width: 84px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.modal-actions button:hover {
+  background: var(--hover);
+}
+
+.modal-actions button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.modal-actions button.primary:hover {
+  filter: brightness(1.08);
+}
+
+/* ---- 預覽排版（接近 GitHub 的樣式）---- */
+.markdown-body {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 36px 40vh;
+  font-size: 15.5px;
+  line-height: 1.75;
+  word-wrap: break-word;
+}
+
+.markdown-body .empty-hint {
+  color: var(--muted);
+  text-align: center;
+  margin-top: 30vh;
+}
+
+.markdown-body > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin: 1.5em 0 0.6em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.markdown-body h1 {
+  font-size: 2em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown-body h2 {
+  font-size: 1.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown-body h3 {
+  font-size: 1.25em;
+}
+
+.markdown-body h4 {
+  font-size: 1em;
+}
+
+.markdown-body h5,
+.markdown-body h6 {
+  font-size: 0.9em;
+  color: var(--muted);
+}
+
+.markdown-body p,
+.markdown-body ul,
+.markdown-body ol,
+.markdown-body blockquote,
+.markdown-body table,
+.markdown-body pre {
+  margin: 0 0 1em;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 2em;
+}
+
+.markdown-body li + li {
+  margin-top: 0.25em;
+}
+
+.markdown-body li > ul,
+.markdown-body li > ol {
+  margin: 0.25em 0 0;
+}
+
+.markdown-body .task-list-item {
+  list-style: none;
+}
+
+.markdown-body .task-list-item-checkbox {
+  margin: 0 0.4em 0 -1.4em;
+  vertical-align: middle;
+}
+
+.markdown-body blockquote {
+  padding: 0 1em;
+  color: var(--muted);
+  border-left: 4px solid var(--border);
+}
+
+.markdown-body a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+.markdown-body code {
+  padding: 0.15em 0.4em;
+  background: var(--code-bg);
+  border-radius: 5px;
+  font-family: Consolas, "Cascadia Mono", "Microsoft JhengHei UI", monospace;
+  font-size: 0.88em;
+}
+
+.markdown-body pre {
+  padding: 14px 16px;
+  overflow: auto;
+  background: var(--code-bg);
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.markdown-body pre code,
+.markdown-body pre code.hljs {
+  padding: 0;
+  background: transparent;
+  font-size: 0.88em;
+  white-space: pre;
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+}
+
+.markdown-body th,
+.markdown-body td {
+  padding: 6px 13px;
+  border: 1px solid var(--border);
+}
+
+.markdown-body th {
+  font-weight: 600;
+  background: var(--toolbar-bg);
+}
+
+.markdown-body tr:nth-child(2n) td {
+  background: #fafbfc;
+}
+
+.markdown-body img {
+  max-width: 100%;
+}
+
+.markdown-body hr {
+  height: 2px;
+  margin: 1.5em 0;
+  border: none;
+  background: var(--border);
+}
+
+/* ---- Mermaid 圖表 ---- */
+.markdown-body .mermaid-block {
+  margin: 0 0 1em;
+  text-align: center;
+  overflow-x: auto;
+}
+
+.markdown-body .mermaid-block svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-body .mermaid-source {
+  text-align: left;
+  color: var(--muted);
+}
+
+.markdown-body .mermaid-error {
+  padding: 10px 14px;
+  text-align: left;
+  color: #b42318;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+}
+
+.markdown-body .mermaid-error pre {
+  margin: 6px 0 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  white-space: pre-wrap;
+}
+
+/* ---- 數學公式 ---- */
+.markdown-body .katex-block {
+  margin: 0 0 1em;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.markdown-body .katex {
+  font-size: 1.1em;
+}
+
+.markdown-body .katex-error {
+  color: #b42318;
+}
+
+/* ---- 匯出 ---- */
+body.busy,
+body.busy * {
+  cursor: progress !important;
+}
+
+/* 匯出時在畫面外重新繪製文件 */
+.export-host {
+  position: fixed;
+  left: -12000px;
+  top: 0;
+  width: 820px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.export-body {
+  padding: 0;
+}
+
+/* 公式在匯出時改為 inline-block，才能量出實際大小並轉成圖片 */
+.export-body .katex,
+.export-body .katex-display > .katex {
+  display: inline-block;
+}
+
+/* ---- 自動更新卡片（右下角）---- */
+.update-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 40px;
+  z-index: 90;
+  width: min(340px, calc(100vw - 32px));
+  padding: 14px 16px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+}
+
+.update-toast[hidden] {
+  display: none;
+}
+
+.update-title {
+  font-weight: 600;
+}
+
+.update-notes {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.update-notes[hidden],
+.update-progress[hidden] {
+  display: none;
+}
+
+.update-progress {
+  height: 6px;
+  margin-top: 10px;
+  overflow: hidden;
+  background: var(--hover);
+  border-radius: 3px;
+}
+
+.update-bar {
+  width: 0;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s;
+}
+
+.update-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.update-actions:empty {
+  display: none;
+}
+
+.update-actions button {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.update-actions button:hover {
+  background: var(--hover);
+}
+
+.update-actions button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}

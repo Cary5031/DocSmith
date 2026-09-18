@@ -1,0 +1,40 @@
+{
+  "name": "docsmith-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^7.0.0"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/language-data": "^6.5.2",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.5",
+    "@codemirror/view": "^6.43.12",
+    "@joplin/turndown-plugin-gfm": "^1.0.68",
+    "@lezer/highlight": "^1.2.3",
+    "@vscode/markdown-it-katex": "^1.1.2",
+    "codemirror": "^6.0.2",
+    "docx": "^9.7.1",
+    "dompurify": "^3.4.15",
+    "highlight.js": "^11.12.0",
+    "html-to-image": "^1.11.13",
+    "jszip": "^3.10.2",
+    "katex": "^0.18.7",
+    "lucide": "^1.47.0",
+    "mammoth": "^1.12.3",
+    "markdown-it": "^15.0.2",
+    "markdown-it-task-lists": "^2.1.1",
+    "mermaid": "^11.17.2",
+    "pdfjs-dist": "^6.3.289",
+    "turndown": "^7.2.4",
+    "xlsx": "file:vendor/xlsx-0.20.3.tgz"
+  }
+}

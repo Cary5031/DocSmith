@@ -1,0 +1,12 @@
+# 依賴與前端建置產物（建置時自動產生）
+frontend/node_modules/
+frontend/dist/
+frontend/package.json.md5
+
+# 開發模式執行檔（正式版 build/bin/DocSmith.exe 需要推送，供自動更新下載）
+build/bin/*-dev.exe
+
+# 其他
+*.log
+.vscode/
+.idea/
