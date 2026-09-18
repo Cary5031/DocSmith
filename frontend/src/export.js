@@ -10,12 +10,12 @@ const MAX_IMAGE_WIDTH = 600; // A4 內文寬度約 600px
 // ---- 共用：在畫面外重新繪製文件（等圖表、圖片都完成）----
 async function renderOffscreen(source) {
   const host = document.createElement('div');
-  host.className = 'export-host';
+  host.className = 'export-host theme-light'; // 匯出一律用淺色配色
   const article = document.createElement('article');
   article.className = 'markdown-body export-body';
   host.append(article);
   document.body.append(host);
-  await renderPreview(article, source);
+  await renderPreview(article, source, 'light'); // 匯出一律用淺色圖表
   const loading = [...article.querySelectorAll('img')].filter((img) => !img.complete);
   await Promise.all(
     loading.map(

@@ -1,12 +1,11 @@
 import './style.css';
-import 'highlight.js/styles/github.css';
 import {
   createElement,
   FilePlus, FolderOpen, Save, SaveAll,
   Bold, Italic, Strikethrough, Heading1, Heading2, Heading3,
   List, ListOrdered, ListTodo, TextQuote,
   Code, SquareCode, Link, Image, Table, Minus,
-  PenLine, Columns2, Eye, Languages, Sigma, Plus, X, FileDown, FileText, FileOutput,
+  PenLine, Columns2, Eye, Languages, Sigma, Plus, X, FileDown, FileText, FileOutput, Sun, Moon, Monitor,
 } from 'lucide';
 import {
   GetStartupFiles, LoadSettings, SaveSettings, OpenFileDialog, SaveFileDialog,
@@ -15,7 +14,9 @@ import {
   IsDefaultMarkdownApp, ShowDefaultAppDialog,
   CheckForUpdate, ApplyUpdate, WasUpdated, GetVersion,
 } from '../wailsjs/go/main/App';
-import { EventsOn, OnFileDrop, WindowSetTitle, BrowserOpenURL } from '../wailsjs/runtime/runtime';
+import {
+  EventsOn, OnFileDrop, WindowSetTitle, BrowserOpenURL, WindowSetDarkTheme, WindowSetLightTheme,
+} from '../wailsjs/runtime/runtime';
 import { t, setLanguage, getLanguage, detectLanguage, languages, applyToDom } from './i18n.js';
 import { createEditor, commands, languageName } from './editor.js';
 import { renderPreview, lineAnchors } from './preview.js';
@@ -40,7 +41,7 @@ let tabs = [];
 let active = null;
 let tabSeq = 0;
 let viewMode = 'split'; // Markdown 分頁的檢視模式
-let settings = { language: '', defaultPrompt: '' };
+let settings = { language: '', defaultPrompt: '', theme: 'system' };
 
 // 閱讀器（PDF、電子書）：{ open(tab, container, path, app), status(tab), destroy(tab), onActivate?(tab), onKey?(tab, e) }
 const viewers = { pdf: pdfViewer, ebook: ebookViewer };
@@ -617,6 +618,36 @@ function changeLanguage(code) {
   SaveSettings(settings);
 }
 
+// ---- 主題（跟隨系統 / 淺色 / 深色）----
+const THEME_ORDER = ['system', 'light', 'dark'];
+const THEME_ICONS = { system: Monitor, light: Sun, dark: Moon };
+const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+function applyTheme() {
+  const setting = THEME_ORDER.includes(settings.theme) ? settings.theme : 'system';
+  const resolved = setting === 'system' ? (systemDark.matches ? 'dark' : 'light') : setting;
+  const changed = document.documentElement.dataset.theme !== resolved;
+  document.documentElement.dataset.theme = resolved;
+  if (resolved === 'dark') WindowSetDarkTheme();
+  else WindowSetLightTheme();
+  const btn = $('mdb-theme');
+  if (btn) {
+    btn.replaceChildren(createElement(THEME_ICONS[setting], { width: 18, height: 18 }));
+    btn.dataset.i18nTitle = `theme_${setting}_app`;
+    btn.title = t(btn.dataset.i18nTitle);
+  }
+  if (changed && active?.kind === 'markdown') render(false); // 圖表依主題重新繪製
+}
+
+function cycleTheme() {
+  const index = THEME_ORDER.indexOf(settings.theme);
+  settings.theme = THEME_ORDER[(index + 1) % THEME_ORDER.length];
+  applyTheme();
+  SaveSettings(settings);
+}
+
+systemDark.addEventListener('change', applyTheme);
+
 // ---- 預設程式（.md 檔案關聯）----
 async function refreshDefaultLink() {
   $('mdb-set-default').hidden = await IsDefaultMarkdownApp();
@@ -754,6 +785,11 @@ function buildToolbar() {
     modes.append(btn);
   }
   bar.append(modes);
+
+  const theme = iconButton(Monitor, 'theme_system_app', cycleTheme);
+  theme.id = 'mdb-theme';
+  theme.classList.add('theme-toggle');
+  bar.append(theme);
 
   const lang = document.createElement('label');
   lang.className = 'lang-select';
@@ -967,6 +1003,7 @@ async function init() {
   $('mdb-language').value = lang;
   setLanguage(lang);
   applyToDom();
+  applyTheme();
 
   await addTab();
   for (const path of await GetStartupFiles()) await openPath(path);

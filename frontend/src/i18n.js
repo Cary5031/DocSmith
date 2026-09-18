@@ -120,6 +120,12 @@ const messages = {
     searchResults: '找到 {count} 筆',
     drmProtected: '此電子書有 DRM 保護，無法開啟。',
     ebookStatus: '{chapter}   {percent}%',
+    theme_system_app: 'Theme: follow system (click to change)',
+    theme_light_app: 'Theme: light (click to change)',
+    theme_dark_app: 'Theme: dark (click to change)',
+    theme_system_app: '主題：跟隨系統（點選切換）',
+    theme_light_app: '主題：淺色（點選切換）',
+    theme_dark_app: '主題：深色（點選切換）',
   },
   en: {
     appName: 'DocSmith',

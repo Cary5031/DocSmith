@@ -212,31 +212,39 @@ const theme = EditorView.theme({
     fontFamily: 'Consolas, "Cascadia Mono", "Microsoft JhengHei UI", "Microsoft JhengHei", monospace',
     lineHeight: '1.65',
   },
-  '.cm-content': { padding: '16px 0 40vh' },
+  '.cm-content': { padding: '16px 0 40vh', caretColor: 'var(--text)' },
   '.cm-line': { padding: '0 20px 0 12px' },
   '.cm-gutters': { background: 'var(--gutter-bg)', color: 'var(--muted)', border: 'none' },
   '.cm-activeLineGutter': { background: 'var(--active-line)' },
   '.cm-activeLine': { background: 'var(--active-line)' },
+  '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--text)' },
+  '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, ::selection': {
+    background: 'var(--selection) !important',
+  },
+  '.cm-panels': { background: 'var(--toolbar-bg)', color: 'var(--text)' },
+  '.cm-panels input, .cm-panels button': { color: 'var(--text)' },
+  '.cm-searchMatch': { background: 'var(--mark-bg)' },
+  '.cm-tooltip': { background: 'var(--bg)', color: 'var(--text)', border: '1px solid var(--border)' },
 });
 
 // 編輯區的語法上色（取代預設樣式：標題不加底線、標記符號用淡色）
 const highlight = HighlightStyle.define([
-  { tag: tags.heading, fontWeight: 'bold', color: '#0b3d91' },
+  { tag: tags.heading, fontWeight: 'bold', color: 'var(--hl-heading)' },
   { tag: tags.strong, fontWeight: 'bold' },
   { tag: tags.emphasis, fontStyle: 'italic' },
   { tag: tags.strikethrough, textDecoration: 'line-through' },
-  { tag: [tags.link, tags.url], color: '#2f6fdb' },
-  { tag: [tags.processingInstruction, tags.meta, tags.contentSeparator], color: '#8c959f' },
-  { tag: tags.quote, color: '#57606a' },
-  { tag: tags.monospace, color: '#953800' },
+  { tag: [tags.link, tags.url], color: 'var(--hl-link)' },
+  { tag: [tags.processingInstruction, tags.meta, tags.contentSeparator], color: 'var(--hl-meta)' },
+  { tag: tags.quote, color: 'var(--hl-quote)' },
+  { tag: tags.monospace, color: 'var(--hl-mono)' },
   // 程式碼區塊內
-  { tag: tags.keyword, color: '#cf222e' },
-  { tag: [tags.string, tags.special(tags.string)], color: '#0a3069' },
-  { tag: tags.comment, color: '#6e7781', fontStyle: 'italic' },
-  { tag: [tags.number, tags.bool, tags.null, tags.atom], color: '#0550ae' },
-  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: '#8250df' },
-  { tag: [tags.typeName, tags.className], color: '#953800' },
-  { tag: [tags.tagName, tags.propertyName, tags.attributeName], color: '#116329' },
+  { tag: tags.keyword, color: 'var(--hl-keyword)' },
+  { tag: [tags.string, tags.special(tags.string)], color: 'var(--hl-string)' },
+  { tag: tags.comment, color: 'var(--hl-comment)', fontStyle: 'italic' },
+  { tag: [tags.number, tags.bool, tags.null, tags.atom], color: 'var(--hl-number)' },
+  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: 'var(--hl-function)' },
+  { tag: [tags.typeName, tags.className], color: 'var(--hl-type)' },
+  { tag: [tags.tagName, tags.propertyName, tags.attributeName], color: 'var(--hl-tag)' },
 ]);
 
 // 依檔名找出程式語言（找不到代表純文字）

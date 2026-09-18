@@ -61,21 +61,29 @@ md.renderer.rules.fence = (tokens, idx, options, env, slf) => {
 
 // ---- Mermaid：延遲載入、依原始碼快取結果 ----
 let mermaidLoader = null;
-const diagramCache = new Map(); // 原始碼 → { svg } 或 { error }
+const diagramCache = new Map(); // 主題 + 原始碼 → { svg } 或 { error }
 let diagramSeq = 0;
+let mermaidTheme = null;
 
-function loadMermaid() {
-  mermaidLoader ??= import('mermaid').then(({ default: mermaid }) => {
+// 目前介面主題（深色時圖表也用深色）
+export function currentTheme() {
+  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+}
+
+async function loadMermaid(theme) {
+  mermaidLoader ??= import('mermaid').then(({ default: mermaid }) => mermaid);
+  const mermaid = await mermaidLoader;
+  if (mermaidTheme !== theme) {
+    mermaidTheme = theme;
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: 'strict',
       suppressErrorRendering: true,
-      theme: 'default',
+      theme: theme === 'dark' ? 'dark' : 'default',
       fontFamily: '"Segoe UI", "Microsoft JhengHei UI", "Microsoft JhengHei", sans-serif',
     });
-    return mermaid;
-  });
-  return mermaidLoader;
+  }
+  return mermaid;
 }
 
 function showDiagram(block, result) {
@@ -92,15 +100,16 @@ function showDiagram(block, result) {
   block.replaceChildren(title, detail);
 }
 
-async function renderDiagrams(blocks) {
+async function renderDiagrams(blocks, theme) {
   if (!blocks.length) return;
-  const mermaid = await loadMermaid();
   for (const block of blocks) {
     if (!block.isConnected) return; // 已被新的預覽取代
     const source = block.textContent;
-    let result = diagramCache.get(source);
+    const key = theme + '|' + source;
+    let result = diagramCache.get(key);
     if (!result) {
       const id = `mermaid-${++diagramSeq}`;
+      const mermaid = await loadMermaid(theme);
       try {
         result = { svg: (await mermaid.render(id, source)).svg };
       } catch (err) {
@@ -109,7 +118,7 @@ async function renderDiagrams(blocks) {
         document.getElementById('d' + id)?.remove();
       }
       if (diagramCache.size > 200) diagramCache.delete(diagramCache.keys().next().value);
-      diagramCache.set(source, result);
+      diagramCache.set(key, result);
     }
     if (block.isConnected) showDiagram(block, result);
   }
@@ -139,8 +148,9 @@ function slugify(text) {
     .replace(/\s/g, '-');
 }
 
-// 產生預覽 HTML 並放進 container；回傳的 Promise 在圖表都繪製完成後 resolve
-export function renderPreview(container, source) {
+// 產生預覽 HTML 並放進 container；回傳的 Promise 在圖表都繪製完成後 resolve。
+// theme：圖表配色（預設跟著介面主題；匯出時固定用 light）
+export function renderPreview(container, source, theme = currentTheme()) {
   const html = DOMPurify.sanitize(md.render(source), {
     ADD_ATTR: ['data-line'],
     FORBID_TAGS: ['style', 'form'],
@@ -165,11 +175,11 @@ export function renderPreview(container, source) {
   // 已快取的圖表立即套用（打字時不閃爍），其餘非同步繪製
   const pending = [];
   container.querySelectorAll('.mermaid-block').forEach((block) => {
-    const cached = diagramCache.get(block.textContent);
+    const cached = diagramCache.get(theme + '|' + block.textContent);
     if (cached) showDiagram(block, cached);
     else pending.push(block);
   });
-  return renderDiagrams(pending);
+  return renderDiagrams(pending, theme);
 }
 
 // 取得預覽中各區塊的 [原始碼行號, 在 container 中的 Y 座標]，依行號排序

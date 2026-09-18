@@ -37,6 +37,7 @@ export namespace main {
 	export class Settings {
 	    language: string;
 	    defaultPrompt: string;
+	    theme: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -46,6 +47,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.language = source["language"];
 	        this.defaultPrompt = source["defaultPrompt"];
+	        this.theme = source["theme"];
 	    }
 	}
 	export class VersionInfo {

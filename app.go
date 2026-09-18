@@ -18,6 +18,7 @@ import (
 type Settings struct {
 	Language      string `json:"language"`
 	DefaultPrompt string `json:"defaultPrompt"` // "never"：不再詢問是否設為預設程式
+	Theme         string `json:"theme"`         // system / light / dark
 }
 
 // App 提供給前端呼叫的方法。
