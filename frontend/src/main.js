@@ -12,11 +12,9 @@ import {
   ReadFile, SaveFile, SetDirty, SetDocPath, ResolvePath, Quit,
   ExportDialog, ExportPDF, WriteBase64File, OpenWithDefaultApp, ImportTargets,
   IsDefaultMarkdownApp, ShowDefaultAppDialog,
-  CheckForUpdate, ApplyUpdate, WasUpdated, GetVersion,
+  CheckForUpdate, ApplyUpdate, WasUpdated, GetVersion, SetTitleBarDark,
 } from '../wailsjs/go/main/App';
-import {
-  EventsOn, OnFileDrop, WindowSetTitle, BrowserOpenURL, WindowSetDarkTheme, WindowSetLightTheme,
-} from '../wailsjs/runtime/runtime';
+import { EventsOn, OnFileDrop, WindowSetTitle, BrowserOpenURL } from '../wailsjs/runtime/runtime';
 import { t, setLanguage, getLanguage, detectLanguage, languages, applyToDom } from './i18n.js';
 import { createEditor, commands, languageName } from './editor.js';
 import { renderPreview, lineAnchors } from './preview.js';
@@ -651,8 +649,7 @@ function applyTheme() {
   const resolved = setting === 'system' ? (systemDark.matches ? 'dark' : 'light') : setting;
   const changed = document.documentElement.dataset.theme !== resolved;
   document.documentElement.dataset.theme = resolved;
-  if (resolved === 'dark') WindowSetDarkTheme();
-  else WindowSetLightTheme();
+  SetTitleBarDark(resolved === 'dark'); // 視窗標題列跟著切換（Windows 10 需要強制重畫）
   const btn = $('mdb-theme');
   if (btn) {
     btn.replaceChildren(createElement(THEME_ICONS[setting], { width: 18, height: 18 }));

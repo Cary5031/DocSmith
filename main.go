@@ -47,6 +47,7 @@ func main() {
 		},
 		Windows: &windows.Options{
 			WebviewUserDataPath: userDataPath(),
+			Theme:               initialTheme(), // 標題列一開始就用上次的主題
 		},
 	})
 

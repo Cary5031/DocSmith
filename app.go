@@ -237,6 +237,10 @@ func settingsPath() string {
 
 // LoadSettings 讀取設定；檔案不存在時回傳空設定（前端依系統語言決定預設值）。
 func (a *App) LoadSettings() Settings {
+	return loadSettings()
+}
+
+func loadSettings() Settings {
 	var s Settings
 	if b, err := os.ReadFile(settingsPath()); err == nil {
 		_ = json.Unmarshal(b, &s)
