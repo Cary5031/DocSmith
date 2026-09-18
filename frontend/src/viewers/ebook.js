@@ -515,6 +515,21 @@ export const ebookViewer = {
     await ctx.view.init({ lastLocation: ctx.data.cfi, showTextStart: !ctx.data.cfi });
   },
 
+  // 側欄大綱：書本目錄
+  async outline(tab) {
+    const ctx = tab.ebook;
+    if (!ctx) return [];
+    const out = [];
+    const walk = (items, level) => {
+      for (const item of items ?? []) {
+        out.push({ label: item.label?.trim() || '—', level, go: () => item.href && ctx.view.goTo(item.href) });
+        walk(item.subitems, level + 1);
+      }
+    };
+    walk(ctx.view.book.toc, 0);
+    return out;
+  },
+
   status(tab) {
     const ctx = tab.ebook;
     if (!ctx?.loc) return '';

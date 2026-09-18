@@ -1135,3 +1135,225 @@ body.busy * {
 .theme-toggle {
   margin-left: 6px;
 }
+
+/* ---- 版面：活動列 / 側欄 / 文件區 ---- */
+.app-body {
+  --side-width: 260px;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.doc-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.activity-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 44px;
+  padding: 6px 0;
+  background: var(--toolbar-bg);
+  border-right: 1px solid var(--border);
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.activity-item:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.activity-item.active {
+  color: var(--accent);
+  background: var(--active);
+}
+
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  width: var(--side-width);
+  min-width: 0;
+  background: var(--toolbar-bg);
+}
+
+.side-panel[hidden],
+.side-resizer[hidden] {
+  display: none;
+}
+
+.side-resizer {
+  width: 5px;
+  margin-left: -2px;
+  margin-right: -3px;
+  z-index: 5;
+  cursor: col-resize;
+  border-left: 1px solid var(--border);
+}
+
+.side-resizer:hover {
+  background: var(--accent);
+  opacity: 0.4;
+}
+
+.side-header {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 6px 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.side-title {
+  flex: 1;
+}
+
+.side-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.side-actions .tool {
+  width: 26px;
+  height: 26px;
+}
+
+.side-content {
+  flex: 1;
+  overflow: auto;
+  padding-bottom: 12px;
+}
+
+.side-empty {
+  padding: 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.side-empty-text {
+  margin: 10px 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.side-primary {
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tree-root {
+  padding: 4px 12px 6px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding-right: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.tree-item:hover {
+  background: var(--hover);
+}
+
+.tree-item.current {
+  background: var(--active);
+  color: var(--accent);
+}
+
+.tree-chevron {
+  display: inline-flex;
+  width: 14px;
+  flex: 0 0 14px;
+  color: var(--muted);
+}
+
+.tree-icon {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.tree-dir .tree-icon {
+  color: #d69e2e;
+}
+
+.tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.outline-item {
+  display: block;
+  width: 100%;
+  height: 26px;
+  padding-right: 10px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.outline-item:hover {
+  background: var(--hover);
+}
+
+.outline-item.current {
+  background: var(--active);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.outline-item[data-type]::before {
+  display: inline-block;
+  width: 16px;
+  margin-right: 4px;
+  color: var(--hl-function);
+  font-family: Consolas, monospace;
+  font-size: 12px;
+  content: "ƒ";
+}
+
+.outline-item[data-type="class"]::before {
+  color: var(--hl-type);
+  content: "C";
+}

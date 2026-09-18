@@ -258,6 +258,21 @@ export const pdfViewer = {
     ctx.ui.page.value = 1;
   },
 
+  // 側欄大綱：PDF 內建的書籤目錄
+  async outline(tab) {
+    const ctx = tab.pdf;
+    if (!ctx?.doc) return [];
+    const out = [];
+    const walk = (items, level) => {
+      for (const item of items ?? []) {
+        if (item.dest) out.push({ label: item.title, level, go: () => ctx.linkService.goToDestination(item.dest) });
+        walk(item.items, level + 1);
+      }
+    };
+    walk(await ctx.doc.getOutline(), 0);
+    return out;
+  },
+
   status(tab) {
     const ctx = tab.pdf;
     if (!ctx?.doc) return '';

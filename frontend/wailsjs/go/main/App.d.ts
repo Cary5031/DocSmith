@@ -18,13 +18,19 @@ export function ImportTargets(arg1:string,arg2:Array<string>):Promise<main.Impor
 
 export function IsDefaultMarkdownApp():Promise<boolean>;
 
+export function ListDir(arg1:string):Promise<Array<main.DirEntry>>;
+
 export function LoadSettings():Promise<main.Settings>;
 
 export function LoadState(arg1:string):Promise<string>;
 
 export function OpenFileDialog(arg1:string,arg2:string,arg3:string,arg4:string):Promise<Array<string>>;
 
+export function OpenFolderDialog(arg1:string):Promise<string>;
+
 export function OpenWithDefaultApp(arg1:string):Promise<void>;
+
+export function PathExists(arg1:string):Promise<boolean>;
 
 export function Quit():Promise<void>;
 

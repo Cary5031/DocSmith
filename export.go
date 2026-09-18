@@ -82,6 +82,7 @@ func (a *App) ExportPDF(html, outPath string) error {
 		"--disable-extensions",
 		"--user-data-dir="+filepath.Join(tmp, "profile"),
 		"--no-pdf-header-footer",
+		"--generate-pdf-document-outline", // 依標題產生 PDF 書籤
 		"--print-to-pdf="+pdfPath,
 		"file:///"+filepath.ToSlash(htmlPath),
 	)

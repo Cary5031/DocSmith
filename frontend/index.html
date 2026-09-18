@@ -7,15 +7,28 @@
 </head>
 <body>
 <header class="toolbar" id="mdb-toolbar"></header>
-<nav class="tabbar" id="mdb-tabs"></nav>
-<main class="workspace mode-split" id="mdb-workspace">
-    <section class="pane editor-pane" id="mdb-editor"></section>
-    <div class="divider"></div>
-    <section class="pane preview-pane" id="mdb-preview-scroll">
-        <article class="markdown-body" id="mdb-preview"></article>
-    </section>
-    <section class="pane viewer-pane" id="mdb-viewer"></section>
-</main>
+<div class="app-body">
+    <nav class="activity-bar" id="mdb-activity"></nav>
+    <aside class="side-panel" id="mdb-side" hidden>
+        <div class="side-header">
+            <span class="side-title" id="mdb-side-title"></span>
+            <div class="side-actions" id="mdb-side-actions"></div>
+        </div>
+        <div class="side-content" id="mdb-side-content"></div>
+    </aside>
+    <div class="side-resizer" id="mdb-side-resizer" hidden></div>
+    <div class="doc-area">
+        <nav class="tabbar" id="mdb-tabs"></nav>
+        <main class="workspace mode-split" id="mdb-workspace">
+            <section class="pane editor-pane" id="mdb-editor"></section>
+            <div class="divider"></div>
+            <section class="pane preview-pane" id="mdb-preview-scroll">
+                <article class="markdown-body" id="mdb-preview"></article>
+            </section>
+            <section class="pane viewer-pane" id="mdb-viewer"></section>
+        </main>
+    </div>
+</div>
 <footer class="statusbar">
     <span class="status-path" id="mdb-status-path"></span>
     <span class="status-message" id="mdb-status-message"></span>

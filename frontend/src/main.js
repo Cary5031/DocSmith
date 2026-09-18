@@ -25,6 +25,8 @@ import { importDocument } from './importer.js';
 import { kindOf, isEditorKind, CONVERTIBLE_EXT } from './kinds.js';
 import { pdfViewer } from './viewers/pdf.js';
 import { ebookViewer } from './viewers/ebook.js';
+import { initSidebar } from './sidebar.js';
+import { EditorView } from '@codemirror/view';
 
 const $ = (id) => document.getElementById(id);
 const workspace = $('mdb-workspace');
@@ -46,12 +48,28 @@ let settings = { language: '', defaultPrompt: '', theme: 'system' };
 // 閱讀器（PDF、電子書）：{ open(tab, container, path, app), status(tab), destroy(tab), onActivate?(tab), onKey?(tab, e) }
 const viewers = { pdf: pdfViewer, ebook: ebookViewer };
 
+// 給側欄、AI 等模組訂閱的事件：active（切換分頁）、change（內容變動）、cursor、saved（存檔路徑）、language
+const listeners = {};
+function emit(event, ...args) {
+  for (const fn of listeners[event] ?? []) {
+    try {
+      fn(...args);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+}
+
 const editor = createEditor($('mdb-editor'), {
   onChange: () => {
     updateDirty();
     if (active?.kind === 'markdown') scheduleRender();
+    emit('change', active);
   },
-  onCursor: updateStatusInfo,
+  onCursor: () => {
+    updateStatusInfo();
+    emit('cursor', active);
+  },
 });
 const view = editor.view;
 
@@ -343,6 +361,7 @@ async function activate(tab) {
     viewers[tab.kind]?.onActivate?.(tab);
   }
   updateStatusInfo();
+  emit('active', tab);
 }
 
 async function addTab(info = {}, content = '') {
@@ -466,6 +485,7 @@ async function openPath(path) {
       return;
     }
     updateStatusInfo();
+    emit('active', tab); // 閱讀器載入完成，大綱等可以更新
     return;
   }
   let d;
@@ -538,6 +558,7 @@ async function writeTo(path) {
   updateStatusInfo();
   renderTabs();
   flashMessage(t('saved'));
+  emit('saved', path);
   return true;
 }
 
@@ -616,6 +637,7 @@ function changeLanguage(code) {
   if (active.kind === 'markdown' && view.state.doc.length === 0) render();
   settings.language = code;
   SaveSettings(settings);
+  emit('language', code);
 }
 
 // ---- 主題（跟隨系統 / 淺色 / 深色）----
@@ -977,7 +999,18 @@ export const app = {
   },
   view,
   editor,
+  viewers,
   t,
+  on(event, fn) {
+    (listeners[event] ??= []).push(fn);
+  },
+  // 編輯器跳到指定行（1 起算）並捲到上方
+  gotoLine(n) {
+    if (!isEditorKind(active.kind)) return;
+    const line = view.state.doc.line(Math.max(1, Math.min(n, view.state.doc.lines)));
+    view.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: 'start', yMargin: 12 }) });
+    view.focus();
+  },
   fileName,
   openPath,
   openFile,
@@ -1006,6 +1039,7 @@ async function init() {
   applyTheme();
 
   await addTab();
+  await initSidebar(app);
   for (const path of await GetStartupFiles()) await openPath(path);
   if (await WasUpdated()) {
     showUpdateToast({ title: t('updatedTo', { version: await GetVersion() }), buttons: [{ label: t('btnOk'), primary: true, run: hideUpdateToast }] });

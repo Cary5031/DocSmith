@@ -34,6 +34,10 @@ export function IsDefaultMarkdownApp() {
   return window['go']['main']['App']['IsDefaultMarkdownApp']();
 }
 
+export function ListDir(arg1) {
+  return window['go']['main']['App']['ListDir'](arg1);
+}
+
 export function LoadSettings() {
   return window['go']['main']['App']['LoadSettings']();
 }
@@ -46,8 +50,16 @@ export function OpenFileDialog(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['OpenFileDialog'](arg1, arg2, arg3, arg4);
 }
 
+export function OpenFolderDialog(arg1) {
+  return window['go']['main']['App']['OpenFolderDialog'](arg1);
+}
+
 export function OpenWithDefaultApp(arg1) {
   return window['go']['main']['App']['OpenWithDefaultApp'](arg1);
+}
+
+export function PathExists(arg1) {
+  return window['go']['main']['App']['PathExists'](arg1);
 }
 
 export function Quit() {
