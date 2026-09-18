@@ -21,6 +21,8 @@
     "@joplin/turndown-plugin-gfm": "^1.0.68",
     "@lezer/highlight": "^1.2.3",
     "@vscode/markdown-it-katex": "^1.1.2",
+    "@wasm-fmt/clang-format": "^23.1.1",
+    "@wasm-fmt/ruff_fmt": "^0.15.20",
     "codemirror": "^6.0.2",
     "docx": "^9.7.1",
     "dompurify": "^3.4.15",
@@ -34,7 +36,10 @@
     "markdown-it-task-lists": "^2.1.1",
     "mermaid": "^11.17.2",
     "pdfjs-dist": "^6.3.289",
+    "prettier": "^3.9.8",
+    "sql-formatter": "^15.8.2",
     "turndown": "^7.2.4",
-    "xlsx": "file:vendor/xlsx-0.20.3.tgz"
+    "xlsx": "file:vendor/xlsx-0.20.3.tgz",
+    "xml-formatter": "^3.7.0"
   }
 }

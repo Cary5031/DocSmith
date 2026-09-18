@@ -1543,3 +1543,10 @@ body.busy * {
 .toolbar {
   --wails-draggable: no-drag;
 }
+
+/* 閱讀器分頁：停用排版 */
+body[data-kind="pdf"] .tool-group[data-role="tools"],
+body[data-kind="ebook"] .tool-group[data-role="tools"] {
+  opacity: 0.35;
+  pointer-events: none;
+}

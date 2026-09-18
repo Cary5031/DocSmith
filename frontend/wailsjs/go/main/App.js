@@ -26,6 +26,10 @@ export function ExportPDF(arg1, arg2) {
   return window['go']['main']['App']['ExportPDF'](arg1, arg2);
 }
 
+export function FormatGo(arg1) {
+  return window['go']['main']['App']['FormatGo'](arg1);
+}
+
 export function GetStartupFiles() {
   return window['go']['main']['App']['GetStartupFiles']();
 }

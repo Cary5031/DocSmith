@@ -6,6 +6,7 @@ import {
   List, ListOrdered, ListTodo, TextQuote,
   Code, SquareCode, Link, Image, Table, Minus,
   PenLine, Columns2, Eye, Languages, Sigma, Plus, X, FileDown, FileText, FileOutput, Sun, Moon, Monitor, Square, Copy,
+  WandSparkles,
 } from 'lucide';
 import {
   GetStartupFiles, LoadSettings, SaveSettings, OpenFileDialog, SaveFileDialog,
@@ -30,6 +31,7 @@ import { ebookViewer } from './viewers/ebook.js';
 import { initSidebar } from './sidebar.js';
 import { initSearch, focusSearch } from './search.js';
 import { initSession, restoreSession, recoverBackups } from './session.js';
+import { formatDocument } from './format.js';
 import { EditorView } from '@codemirror/view';
 
 const $ = (id) => document.getElementById(id);
@@ -659,6 +661,46 @@ async function exportAs(kind) {
   if (answer === 'open') OpenWithDefaultApp(path).catch((err) => showError(String(err)));
 }
 
+// ---- 自動排版（依文件類型）----
+let formatting = false;
+
+async function formatActive() {
+  if (formatting || !isEditorKind(active.kind)) return;
+  const tab = active;
+  const before = view.state.doc.toString();
+  formatting = true;
+  setBusy(t('formatting'));
+  let result;
+  try {
+    result = await formatDocument(tab.path, tab.kind, before);
+  } catch (err) {
+    const message = String(err?.message ?? err);
+    const type = tab.kind === 'markdown' ? 'Markdown' : (languageName(tab.path) ?? t('plainText'));
+    await showError(message === 'UNSUPPORTED' ? t('formatUnsupported', { type }) : t('formatFailed', { error: message }));
+    return;
+  } finally {
+    formatting = false;
+    setBusy(null);
+  }
+  if (active !== tab) return; // 排版期間切換了分頁
+  if (result.text === before) {
+    flashMessage(t('formatNoChange'));
+    return;
+  }
+  // 只替換有差異的範圍，游標與捲動位置盡量不跳動；可用 Ctrl+Z 復原
+  const after = result.text;
+  let start = 0;
+  while (start < before.length && start < after.length && before[start] === after[start]) start++;
+  let endBefore = before.length;
+  let endAfter = after.length;
+  while (endBefore > start && endAfter > start && before[endBefore - 1] === after[endAfter - 1]) {
+    endBefore--;
+    endAfter--;
+  }
+  view.dispatch({ changes: { from: start, to: endBefore, insert: after.slice(start, endAfter) }, userEvent: 'input.format' });
+  flashMessage(t('formatted', { tool: t(result.tool) }));
+}
+
 // ---- 檢視模式（Markdown 分頁）----
 function setViewMode(mode) {
   if (active.kind !== 'markdown') return;
@@ -753,6 +795,10 @@ const toolbarGroups = [
       { icon: Save, key: 'save', run: save },
       { icon: SaveAll, key: 'saveAs', run: saveAs },
     ],
+  },
+  {
+    role: 'tools',
+    items: [{ icon: WandSparkles, key: 'formatDocument', run: () => formatActive() }],
   },
   {
     role: 'export',
@@ -882,6 +928,12 @@ document.addEventListener(
     if (active && !isEditorKind(active.kind) && viewers[active.kind]?.onKey?.(active, e)) {
       e.preventDefault();
       e.stopPropagation();
+      return;
+    }
+    // Shift+Alt+F：自動排版
+    if (e.altKey && e.shiftKey && !ctrl && k === 'f') {
+      e.preventDefault();
+      formatActive();
       return;
     }
     if (!ctrl || e.altKey) return;

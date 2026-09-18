@@ -14,6 +14,8 @@ export function ExportDialog(arg1:string,arg2:string,arg3:string,arg4:string):Pr
 
 export function ExportPDF(arg1:string,arg2:string):Promise<void>;
 
+export function FormatGo(arg1:string):Promise<string>;
+
 export function GetStartupFiles():Promise<Array<string>>;
 
 export function GetVersion():Promise<string>;
