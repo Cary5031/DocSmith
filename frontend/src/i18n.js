@@ -177,7 +177,7 @@ const messages = {
     aiActionFix: '找錯並修正',
     aiActionDoc: '產生說明文件',
     aiSystemPrompt:
-      '你是文件編輯器 DocSmith 的 AI 助手，協助使用者閱讀、撰寫與修正文件與程式碼。請用 {lang} 回答，內容精簡務實。需要輸出完整的文件或程式碼時，只放在一個程式碼區塊中，不要在區塊內加入說明文字。',
+      '你是文件編輯器 DocSmith 的 AI 助手，協助使用者閱讀、撰寫與修正文件與程式碼。請用 {lang} 回答，內容精簡務實。需要輸出完整的文件或程式碼時，只放在一個程式碼區塊中，不要在區塊內加入說明文字；若內容本身含有程式碼區塊，外層請改用四個反引號包起來。',
     promptSummary: '請摘要目前文件的重點，用條列方式呈現。',
     promptPolish:
       '請潤飾目前文件的文字，讓它更通順、專業，但保持原意、語言與 Markdown 結構。先用一兩句說明你調整了什麼，然後把潤飾後的**完整**內容放在一個程式碼區塊中。',
@@ -434,7 +434,7 @@ const messages = {
     aiActionFix: 'Find and fix',
     aiActionDoc: 'Generate docs',
     aiSystemPrompt:
-      'You are the AI assistant of DocSmith, a document editor. Help the user read, write and revise documents and code. Answer in {lang}, concise and practical. When you output a complete document or file, put it in a single fenced code block with no commentary inside the block.',
+      'You are the AI assistant of DocSmith, a document editor. Help the user read, write and revise documents and code. Answer in {lang}, concise and practical. When you output a complete document or file, put it in a single fenced code block with no commentary inside the block; if that content itself contains code blocks, use four backticks for the outer fence.',
     promptSummary: 'Summarize the key points of the current document as a bullet list.',
     promptPolish:
       'Polish the wording of the current document so it reads better and sounds more professional, keeping the meaning, language and Markdown structure. Say in a sentence or two what you changed, then put the **complete** revised content in a single code block.',

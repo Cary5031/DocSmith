@@ -252,12 +252,63 @@ function setNotice(text) {
 }
 
 // ---- 對話顯示 ----
+const FENCE_OPEN = /^ {0,3}(`{3,})\s*([\w+-]*)\s*$/;
+const FENCE_CLOSE = /^ {0,3}(`{3,})\s*$/;
+
+// 逐行找程式碼區塊：起始圍籬要由「相同或更多反引號」的圍籬收尾，
+// 這樣外層用四個反引號包住、內層還有三個反引號的文件才不會被切斷。
 function extractCodeBlocks(text) {
   const blocks = [];
-  const re = /```([\w+-]*)\n([\s\S]*?)```/g;
-  let m;
-  while ((m = re.exec(text))) blocks.push({ lang: m[1], code: m[2] });
+  const lines = text.split('\n');
+  let open = null;
+  for (let i = 0; i < lines.length; i++) {
+    if (!open) {
+      const m = FENCE_OPEN.exec(lines[i]);
+      if (m) open = { fence: m[1], lang: m[2], start: i + 1 };
+      continue;
+    }
+    const m = FENCE_CLOSE.exec(lines[i]);
+    if (m && m[1].length >= open.fence.length) {
+      blocks.push({ lang: open.lang, code: lines.slice(open.start, i).join('\n') });
+      open = null;
+    }
+  }
+  // 串流還沒收尾時，先把已經拿到的內容當成一個區塊
+  if (open && open.start < lines.length) blocks.push({ lang: open.lang, code: lines.slice(open.start).join('\n') });
   return blocks;
+}
+
+// 「套用到文件」「開成新分頁」要用的完整內容。
+// 模型常把整份 Markdown 文件包在一個程式碼區塊裡，而文件本身又含有程式碼範例
+// （內外都是三個反引號）；這時只取第一個區塊會變成開頭幾行而已，
+// 所以遇到 markdown 區塊就抓到「最後一個收尾圍籬」為止。
+function documentFrom(content) {
+  const lines = content.split('\n');
+  let open = null;
+  for (let i = 0; i < lines.length; i++) {
+    const m = FENCE_OPEN.exec(lines[i]);
+    if (m) {
+      open = { fence: m[1], lang: m[2].toLowerCase(), start: i + 1 };
+      break;
+    }
+  }
+  if (open && (open.lang === 'md' || open.lang === 'markdown')) {
+    for (let i = lines.length - 1; i >= open.start; i--) {
+      const m = FENCE_CLOSE.exec(lines[i]);
+      if (m && m[1].length >= open.fence.length) {
+        const span = lines.slice(open.start, i).join('\n');
+        if (span.trim()) return span;
+        break;
+      }
+    }
+  }
+  const blocks = extractCodeBlocks(content);
+  const markdown = blocks.find((b) => b.lang === 'md' || b.lang === 'markdown');
+  if (markdown) return markdown.code;
+  const largest = blocks.slice().sort((a, b) => b.code.length - a.code.length)[0];
+  // 只有在程式碼區塊本身就佔了大半回覆時，才把它當成「整份內容」
+  if (largest && largest.code.length >= content.trim().length * 0.5) return largest.code;
+  return content;
 }
 
 function actionBar(code, lang, mode) {
@@ -308,7 +359,7 @@ function renderMessage(message, index) {
   });
   // 整份改寫：提供差異比較後套用
   if ((message.mode === 'rewrite' || message.mode === 'newdoc') && message.done) {
-    const candidate = blocks[0]?.code ?? message.content;
+    const candidate = documentFrom(message.content);
     const footer = document.createElement('div');
     footer.className = 'ai-message-footer';
     if (message.mode === 'rewrite') {
