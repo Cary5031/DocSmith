@@ -2152,3 +2152,11 @@ body[data-kind="ebook"] .tool-group[data-role="tools"] {
 .ai-limit {
   width: 120px;
 }
+
+#mdb-version {
+  opacity: 0.75;
+}
+
+#mdb-version:hover {
+  opacity: 1;
+}

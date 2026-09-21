@@ -37,6 +37,8 @@ import { initAIPanel, toggleAIPanel } from './ai/panel.js';
 import { GetAIConfig } from '../wailsjs/go/main/App';
 import { EditorView } from '@codemirror/view';
 
+const REPO_URL = 'https://github.com/Cary5031/DocSmith'; // 關於視窗與自動更新的專案頁面
+
 const $ = (id) => document.getElementById(id);
 const workspace = $('mdb-workspace');
 const previewScroll = $('mdb-preview-scroll');
@@ -1027,16 +1029,43 @@ function hideUpdateToast() {
   $('mdb-update').hidden = true;
 }
 
-// 檢查新版本；離線或連不上 GitHub 時靜默略過
-async function checkForUpdate() {
-  if (updating || updateDismissed) return;
+// 狀態列的版本號與「關於」
+async function initAbout() {
+  const button = $('mdb-version');
+  const version = await GetVersion().catch(() => '');
+  if (!version) {
+    button.hidden = true;
+    return;
+  }
+  button.textContent = `v${version}`;
+  button.addEventListener('click', () => showAbout(version));
+}
+
+async function showAbout(version) {
+  const answer = await showModal(t('about'), `${t('appName')}（${t('appNameZh')}）\n${t('aboutVersion', { version })}\n${REPO_URL}`, [
+    { label: t('checkUpdate'), value: 'check', primary: true },
+    { label: t('aboutOpenRepo'), value: 'repo' },
+    { label: t('btnClose'), value: 'close' },
+  ]);
+  if (answer === 'repo') BrowserOpenURL(REPO_URL);
+  if (answer === 'check') await checkForUpdate({ manual: true });
+}
+
+// 檢查新版本；離線或連不上 GitHub 時靜默略過（手動檢查才回報結果）
+async function checkForUpdate({ manual = false } = {}) {
+  if (updating || (updateDismissed && !manual)) return;
   let check;
   try {
     check = await CheckForUpdate();
   } catch {
+    if (manual) await showError(t('updateCheckFailed'));
     return;
   }
-  if (!check?.available) return;
+  if (!check?.available) {
+    if (manual) flashMessage(t('updateNone'));
+    return;
+  }
+  if (manual) updateDismissed = false;
   const notes = check.latest.notes?.[getLanguage()] ?? check.latest.notes?.en ?? '';
   showUpdateToast({
     title: t('updateAvailable', { version: check.latest.version }),
@@ -1224,6 +1253,7 @@ async function init() {
   initSearch(app);
   initSession(app);
   initAISettings(app);
+  await initAbout();
   await initSidebar(app);
   // 公司政策停用 AI 時，隱藏 AI 按鈕與面板
   let aiDisabled = false;
