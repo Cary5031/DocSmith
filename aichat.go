@@ -178,11 +178,20 @@ func (a *App) streamChat(ctx context.Context, ar *aiRequest, payload []byte, id 
 					Error struct {
 						Message string `json:"message"`
 					} `json:"error"`
+					Usage *struct {
+						PromptTokens     int `json:"prompt_tokens"`
+						CompletionTokens int `json:"completion_tokens"`
+						TotalTokens      int `json:"total_tokens"`
+					} `json:"usage"`
 				}
 				if json.Unmarshal([]byte(data), &chunk) == nil {
 					if chunk.Error.Message != "" {
 						flush()
 						return fmt.Errorf("AI_SERVICE|%s", chunk.Error.Message)
+					}
+					// 服務多半把 usage 放在最後一個 chunk；有拿到就送給前端顯示實際用量
+					if u := chunk.Usage; u != nil && u.TotalTokens > 0 {
+						runtime.EventsEmit(a.ctx, "ai:usage", id, u.PromptTokens, u.CompletionTokens, u.TotalTokens)
 					}
 					for _, c := range chunk.Choices {
 						text := c.Delta.Content

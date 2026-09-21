@@ -2,6 +2,7 @@
 import { createElement, Eye, EyeOff, Trash2, Plus, RefreshCw, Zap } from 'lucide';
 import { GetAIConfig, SaveAIConfig, ListAIModels, TestAIConnection } from '../../wailsjs/go/main/App';
 import { t } from '../i18n.js';
+import { contextSizeFor } from './tokens.js';
 
 const KEEP = '__docsmith_keep__'; // 與 Go 端一致：表示祕密欄位沒有變動
 const PROVIDERS = [
@@ -51,6 +52,7 @@ function draftOf(id) {
     keyHint: config.providers[id]?.keyHint ?? '',
     headers: (config.providers[id]?.headers ?? []).map((h) => ({ name: h.name, value: KEEP, hint: h.value })),
     thinking: config.providers[id]?.thinking ?? '',
+    contextLimit: config.providers[id]?.contextLimit || '',
     models: [],
   };
   return drafts[id];
@@ -66,6 +68,7 @@ function requestFor(id) {
     key: d.key,
     headers: d.headers.filter((h) => h.name.trim()).map((h) => ({ name: h.name, value: h.value })),
     thinking: d.thinking,
+    contextLimit: Number(d.contextLimit) || 0,
     accepted: false,
   };
 }
@@ -153,6 +156,15 @@ function build() {
   const thinkingNote = document.createElement('span');
   thinkingNote.className = 'form-hint';
 
+  // 對話長度上限：留空就依模型名稱自動判斷
+  const contextLimit = document.createElement('input');
+  contextLimit.type = 'number';
+  contextLimit.min = '0';
+  contextLimit.className = 'ai-limit';
+  contextLimit.addEventListener('input', () => (draftOf(current).contextLimit = contextLimit.value));
+  const contextHint = document.createElement('span');
+  contextHint.className = 'form-hint';
+
   const headers = document.createElement('div');
   headers.className = 'ai-headers';
   const addHeader = document.createElement('button');
@@ -192,13 +204,14 @@ function build() {
     row('aiApiKey', key, reveal, clearKey),
     row('aiModel', model, models, fetchModels),
     row('aiThinkingMode', thinking, thinkingNote),
+    row('aiContextLimit', contextLimit, contextHint),
     row('aiHeaders', headers, addHeader),
     result,
     actions,
   );
   root.append(box);
   document.body.append(root);
-  ui = { provider, baseUrl, key, model, models, thinking, thinkingNote, headers, result, policyNote, test, save };
+  ui = { provider, baseUrl, key, model, models, thinking, thinkingNote, contextLimit, contextHint, headers, result, policyNote, test, save };
   root.addEventListener('mousedown', (e) => {
     if (e.target === root) close();
   });
@@ -264,6 +277,9 @@ function render() {
   ui.thinking.replaceChildren(...THINKING.map(([value, key]) => new Option(t(key), value)));
   ui.thinking.value = d.thinking ?? '';
   ui.thinkingNote.textContent = t('aiThinkingHint');
+  ui.contextLimit.value = d.contextLimit || '';
+  ui.contextLimit.placeholder = String(contextSizeFor(d.model));
+  ui.contextHint.textContent = t('aiContextLimitHint');
   renderHeaders();
 
   const notes = [];
@@ -310,6 +326,7 @@ async function saveAndClose() {
     await SaveAIConfig(requestFor(current));
     config = await GetAIConfig();
     drafts = {};
+    app.emit?.('aiconfig'); // 讓用量長條重新讀模型與上限
     app.flashMessage(t('aiSettingsSaved'));
     close();
   } catch (err) {

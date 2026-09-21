@@ -19,6 +19,8 @@ import {
   useFolder,
 } from './conversations.js';
 import { initHistory, toggleHistory, refreshHistory } from './history.js';
+import { estimateMessages, calibrate, isCalibrated, contextSizeFor } from './tokens.js';
+import { GetAIConfig } from '../../wailsjs/go/main/App';
 
 const MAX_DOC_CHARS = 40000; // 單一文件送出的上限
 const MAX_HISTORY = 12; // 帶入的對話輪數
@@ -32,6 +34,9 @@ let messages = []; // 目前這組對話的訊息（實際資料在 conversation
 let selected = new Set(); // 勾選的分頁 id
 let streaming = null; // { id, index, mode }
 const pdfTextCache = new Map();
+let usage = { used: 0, limit: 128000, actual: false }; // 下一次請求的預估用量
+let aiSetup = { model: '', limit: 0 }; // 目前供應商的模型與自訂上限
+let lastRequest = []; // 上一次送出的訊息（校正估算用）
 
 // ---- 常用動作 ----
 const QUICK_ACTIONS = [
@@ -59,6 +64,7 @@ function useChat(chat) {
   streaming = null;
   updateSendButton();
   renderMessages();
+  updateUsage();
 }
 
 export async function newConversation() {
@@ -89,6 +95,7 @@ export function toggleAIPanel(forceOpen = false) {
   if (layout.open) {
     ui.input.focus();
     renderContext();
+    loadAISetup().then(updateUsage);
   }
 }
 
@@ -174,11 +181,32 @@ function build() {
   const list = document.createElement('div');
   list.className = 'ai-messages';
 
+  const meter = document.createElement('div');
+  meter.className = 'ai-meter';
+  const meterBar = document.createElement('div');
+  meterBar.className = 'ai-meter-bar';
+  const meterFill = document.createElement('div');
+  meterFill.className = 'ai-meter-fill';
+  meterBar.append(meterFill);
+  const meterText = document.createElement('span');
+  meterText.className = 'ai-meter-text';
+  const meterAction = document.createElement('button');
+  meterAction.type = 'button';
+  meterAction.className = 'ai-meter-action';
+  meterAction.textContent = t('aiUsageNewChat');
+  meterAction.hidden = true;
+  meterAction.addEventListener('click', () => newConversation());
+  const meterLine = document.createElement('div');
+  meterLine.className = 'ai-meter-line';
+  meterLine.append(meterText, meterAction);
+  meter.append(meterBar, meterLine);
+
   const composer = document.createElement('div');
   composer.className = 'ai-composer';
   const input = document.createElement('textarea');
   input.rows = 3;
   input.dataset.i18nPlaceholder = 'aiInputPlaceholder';
+  input.addEventListener('input', () => updateUsage());
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
@@ -191,8 +219,8 @@ function build() {
   sendButton.addEventListener('click', () => (streaming ? stop() : submit()));
   composer.append(input, sendButton);
 
-  panel.replaceChildren(header, history, context, actions, list, composer);
-  ui = { context, list, input, sendButton };
+  panel.replaceChildren(header, history, context, actions, list, meter, composer);
+  ui = { context, list, input, sendButton, meter, meterFill, meterText, meterAction };
   applyToDom(panel);
   updateSendButton();
 }
@@ -203,6 +231,48 @@ function updateSendButton() {
     document.createTextNode(` ${t(streaming ? 'aiStop' : 'aiSend')}`),
   );
   ui.sendButton.classList.toggle('stop', Boolean(streaming));
+}
+
+// ---- Token 用量 ----
+// 算的是「下一次請求會送出的量」：系統提示 ＋ 勾選的參考文件 ＋ 歷史 ＋ 輸入框裡的問題
+async function updateUsage() {
+  if (!ui.meterFill) return;
+  const context = await buildContextMessage({ quiet: true });
+  const draft = ui.input.value.trim();
+  const parts = [systemMessage(), ...historyMessages(), ...(draft ? [{ role: 'user', content: draft }] : [])];
+  if (context) {
+    const last = parts.at(-1);
+    if (last.role === 'user') last.content = `${context}\n\n---\n\n${last.content}`;
+    else parts.push({ role: 'user', content: context });
+  }
+  usage.used = estimateMessages(parts);
+  usage.limit = aiSetup.limit || contextSizeFor(aiSetup.model);
+  usage.actual = isCalibrated();
+  renderUsage();
+}
+
+function renderUsage() {
+  const ratio = usage.limit > 0 ? usage.used / usage.limit : 0;
+  const percent = Math.min(100, Math.round(ratio * 100));
+  ui.meterFill.style.width = `${Math.min(100, Math.max(1.5, percent))}%`;
+  ui.meter.dataset.level = ratio >= 0.8 ? 'high' : ratio >= 0.6 ? 'mid' : 'low';
+  ui.meterText.textContent = t(usage.actual ? 'aiUsageText' : 'aiUsageTextApprox', {
+    used: usage.used.toLocaleString(),
+    limit: usage.limit.toLocaleString(),
+    percent,
+  });
+  ui.meterAction.hidden = ratio < 0.8;
+}
+
+// 讀目前供應商的模型與自訂上限（算百分比用）
+async function loadAISetup() {
+  try {
+    const config = await GetAIConfig();
+    const provider = config.providers?.[config.active] ?? {};
+    aiSetup = { model: provider.model ?? '', limit: Number(provider.contextLimit) || 0 };
+  } catch {
+    aiSetup = { model: '', limit: 0 };
+  }
 }
 
 // ---- 參考文件（勾選分頁）----
@@ -217,6 +287,7 @@ function renderContext() {
       if (box.checked) selected.add(tab.id);
       else selected.delete(tab.id);
       renderContext();
+      updateUsage();
     });
     const name = document.createElement('span');
     name.textContent = app.fileName(tab.path);
@@ -243,7 +314,7 @@ async function tabText(tab) {
   return null;
 }
 
-async function buildContextMessage() {
+async function buildContextMessage({ quiet = false } = {}) {
   const parts = [];
   const notes = [];
   let chars = 0;
@@ -274,12 +345,12 @@ async function buildContextMessage() {
     parts.push(`### ${app.fileName(tab.path)}${truncated ? t('aiTruncatedMark') : ''}\n${fence}\n${text}\n${fence}`);
   }
   if (!parts.length) {
-    setNotice(notes.join(' '));
+    if (!quiet) setNotice(notes.join(' '));
     return null;
   }
   // 讓使用者看得到這次真的送了多少內容出去
   notes.unshift(t('aiContextSent', { count: parts.length, chars: chars.toLocaleString() }));
-  setNotice(notes.join(' '));
+  if (!quiet) setNotice(notes.join(' '));
   return `${t('aiContextIntro')}\n\n${parts.join('\n\n')}`;
 }
 
@@ -437,6 +508,14 @@ function renderMessages(keepScroll = false) {
 }
 
 // ---- 送出與串流 ----
+// 會帶進請求的歷史訊息（去掉錯誤訊息，只留最近幾則）
+function historyMessages() {
+  return messages
+    .filter((m) => !m.error)
+    .slice(-MAX_HISTORY)
+    .map(({ role, content }) => ({ role, content }));
+}
+
 function systemMessage() {
   return { role: 'system', content: t('aiSystemPrompt', { lang: getLanguage() === 'en' ? 'English' : '繁體中文' }) };
 }
@@ -453,14 +532,12 @@ async function send(prompt, mode = 'chat') {
   }
   const context = await buildContextMessage();
   messages.push({ role: 'user', content: prompt });
-  const history = messages
-    .filter((m) => !m.error)
-    .slice(-MAX_HISTORY)
-    .map(({ role, content }) => ({ role, content }));
+  const history = historyMessages();
   // 文件內容併進「這一次的問題」同一則訊息：有些服務會合併或丟掉連續的 user 訊息，
   // 分開送會讓模型看不到文件。
   if (context) history[history.length - 1].content = `${context}\n\n---\n\n${prompt}`;
   const request = [systemMessage(), ...history];
+  lastRequest = request;
   const id = `chat-${Date.now()}`;
   messages.push({ role: 'assistant', content: '', mode, done: false });
   streaming = { id, index: messages.length - 1, mode };
@@ -501,6 +578,7 @@ function finishStreaming(errorText = null, isError = false) {
   updateSendButton();
   renderMessages();
   saveChat();
+  loadAISetup().then(updateUsage);
 }
 
 async function applyRewrite(text) {
@@ -545,6 +623,8 @@ export async function initAIPanel(appApi, disabled = false) {
   renderMessages();
   if (app.active) selected = new Set([app.active.id]);
   renderContext();
+  await loadAISetup();
+  updateUsage();
 
   app.on('active', (tab) => {
     // 切換分頁時，預設把新分頁加入參考（使用者仍可自行取消）
@@ -553,7 +633,10 @@ export async function initAIPanel(appApi, disabled = false) {
   });
   app.on('tabs', () => {
     for (const id of [...selected]) if (!app.tabs.some((tab) => tab.id === id)) selected.delete(id);
-    if (layout.open) renderContext();
+    if (layout.open) {
+      renderContext();
+      updateUsage();
+    }
   });
   app.on('language', () => {
     build();
@@ -562,6 +645,7 @@ export async function initAIPanel(appApi, disabled = false) {
     renderContext();
     refreshHistory(currentChat().id);
   });
+  app.on('aiconfig', () => loadAISetup().then(updateUsage));
   app.on('folder', async (root) => {
     // 換資料夾就換成那個資料夾的對話紀錄（紀錄清單開著就直接更新內容）
     useChat(await useFolder(root ?? ''));
@@ -580,6 +664,10 @@ export async function initAIPanel(appApi, disabled = false) {
     const message = messages[streaming.index];
     message.think = (message.think ?? '') + text;
     renderMessages(true);
+  });
+  EventsOn('ai:usage', (id, prompt) => {
+    if (streaming?.id !== id || !prompt) return;
+    calibrate(prompt, lastRequest);
   });
   EventsOn('ai:done', (id) => {
     if (streaming?.id === id) finishStreaming();

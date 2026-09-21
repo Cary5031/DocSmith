@@ -2092,3 +2092,63 @@ body[data-kind="ebook"] .tool-group[data-role="tools"] {
   font-size: 11.5px;
   word-break: break-all;
 }
+
+/* ---- AI token 用量 ---- */
+.ai-meter {
+  padding: 6px 10px 0;
+}
+
+.ai-meter-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.ai-meter-fill {
+  height: 100%;
+  width: 2%;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.ai-meter[data-level='mid'] .ai-meter-fill {
+  background: #d98324;
+}
+
+.ai-meter[data-level='high'] .ai-meter-fill {
+  background: var(--err-fg);
+}
+
+.ai-meter-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.ai-meter-text {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.ai-meter[data-level='high'] .ai-meter-text {
+  color: var(--err-fg);
+}
+
+.ai-meter-action {
+  margin-left: auto;
+  padding: 1px 8px;
+  border: 1px solid var(--err-fg);
+  border-radius: 10px;
+  background: none;
+  color: var(--err-fg);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.ai-limit {
+  width: 120px;
+}
