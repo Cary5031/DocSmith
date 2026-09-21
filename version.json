@@ -2,7 +2,7 @@
   "version": "1.0.0",
   "releaseDate": "2026-09-21",
   "downloadUrl": "https://github.com/Cary5031/DocSmith/raw/main/build/bin/DocSmith.exe",
-  "sha256": "fe422363014780899785f363508d4d46bad12b4f503fc1e4a4913c7894230ed5",
+  "sha256": "96ba330ce646cddd24047e9f7688704edc3d144a4c7fee1664c272f055337381",
   "notes": {
     "zh-TW": "DocSmith 1.0：Markdown 編輯、PDF 與電子書閱讀、文件轉換與匯出、程式碼自動排版、AI 助手（多組對話、token 用量、思考模式）。",
     "en": "DocSmith 1.0: Markdown editing, PDF and e-book reading, document conversion and export, code formatting, and an AI assistant (multiple conversations, token usage, thinking mode)."

@@ -58,3 +58,9 @@ if ($versionText -match '"sha256"') {
 $sizeMB = [Math]::Round((Get-Item $exe).Length / 1MB, 1)
 Write-Host ''
 Write-Host "完成：$exe（$sizeMB MB）" -ForegroundColor Green
+
+# 發布提醒：version.json 與 exe 必須一起 commit，否則自動更新會因雜湊不符而失敗
+Write-Host ''
+Write-Host "SHA-256：$hash"
+Write-Host '發布前請把 version.json 與 build\bin\DocSmith.exe 一起 commit；' -ForegroundColor Yellow
+Write-Host '之後若又重新編譯（含測試版建置），務必再跑一次本腳本，否則 version.json 記的雜湊會對不上。' -ForegroundColor Yellow
