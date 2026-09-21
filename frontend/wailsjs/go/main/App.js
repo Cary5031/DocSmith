@@ -10,6 +10,10 @@ export function CancelAIChat(arg1) {
   return window['go']['main']['App']['CancelAIChat'](arg1);
 }
 
+export function ChatFolder() {
+  return window['go']['main']['App']['ChatFolder']();
+}
+
 export function CheckForUpdate() {
   return window['go']['main']['App']['CheckForUpdate']();
 }
@@ -20,6 +24,10 @@ export function ClearBackups() {
 
 export function DeleteBackup(arg1) {
   return window['go']['main']['App']['DeleteBackup'](arg1);
+}
+
+export function DeleteChat(arg1) {
+  return window['go']['main']['App']['DeleteChat'](arg1);
 }
 
 export function ExportDialog(arg1, arg2, arg3, arg4) {
@@ -62,8 +70,16 @@ export function ListBackups() {
   return window['go']['main']['App']['ListBackups']();
 }
 
+export function ListChats() {
+  return window['go']['main']['App']['ListChats']();
+}
+
 export function ListDir(arg1) {
   return window['go']['main']['App']['ListDir'](arg1);
+}
+
+export function LoadChat(arg1) {
+  return window['go']['main']['App']['LoadChat'](arg1);
 }
 
 export function LoadSettings() {
@@ -90,6 +106,10 @@ export function PathExists(arg1) {
   return window['go']['main']['App']['PathExists'](arg1);
 }
 
+export function PickChatBackup(arg1, arg2) {
+  return window['go']['main']['App']['PickChatBackup'](arg1, arg2);
+}
+
 export function Quit() {
   return window['go']['main']['App']['Quit']();
 }
@@ -110,6 +130,10 @@ export function SaveAIConfig(arg1) {
   return window['go']['main']['App']['SaveAIConfig'](arg1);
 }
 
+export function SaveChat(arg1, arg2) {
+  return window['go']['main']['App']['SaveChat'](arg1, arg2);
+}
+
 export function SaveFile(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['SaveFile'](arg1, arg2, arg3, arg4, arg5);
 }
@@ -128,6 +152,10 @@ export function SaveState(arg1, arg2) {
 
 export function SearchFolder(arg1, arg2, arg3) {
   return window['go']['main']['App']['SearchFolder'](arg1, arg2, arg3);
+}
+
+export function SetChatFolder(arg1) {
+  return window['go']['main']['App']['SetChatFolder'](arg1);
 }
 
 export function SetDirty(arg1) {

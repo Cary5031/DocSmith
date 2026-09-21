@@ -1,13 +1,24 @@
 // AI 面板（視窗右側）：對話、以開啟的分頁作為討論內容、常用動作、把結果套用到文件。
-import { createElement, Bot, Send, Square, Trash2, Settings, X, ClipboardCopy, CornerDownLeft, Replace, FileDown } from 'lucide';
+import { createElement, Bot, Send, Square, Trash2, Settings, X, ClipboardCopy, CornerDownLeft, Replace, FileDown, MessageSquarePlus, History } from 'lucide';
 import { StartAIChat, CancelAIChat, LoadState, SaveState, ImportTargets } from '../../wailsjs/go/main/App';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { t, getLanguage, applyToDom } from '../i18n.js';
 import { renderPreview } from '../preview.js';
 import { isEditorKind } from '../kinds.js';
 import { importDocument } from '../importer.js';
+import { explorerRoot } from '../sidebar.js';
 import { openAISettings, ensureAIConsent, aiReady, aiErrorMessage } from './settings.js';
 import { showDiff } from './diff.js';
+import {
+  initConversations,
+  currentChat,
+  saveCurrent,
+  startNew,
+  switchTo,
+  removeChat,
+  useFolder,
+} from './conversations.js';
+import { initHistory, toggleHistory, refreshHistory } from './history.js';
 
 const MAX_DOC_CHARS = 40000; // 單一文件送出的上限
 const MAX_HISTORY = 12; // 帶入的對話輪數
@@ -17,7 +28,7 @@ let app = null;
 let panel = null;
 let ui = {};
 let layout = { open: false, width: 400 };
-let messages = []; // { role, content, mode?, error? }
+let messages = []; // 目前這組對話的訊息（實際資料在 conversations.js）
 let selected = new Set(); // 勾選的分頁 id
 let streaming = null; // { id, index, mode }
 const pdfTextCache = new Map();
@@ -38,7 +49,36 @@ function saveLayout() {
 }
 
 function saveChat() {
-  SaveState('ai.chat', JSON.stringify({ messages: messages.slice(-60) }));
+  saveCurrent();
+  refreshHistory(currentChat().id);
+}
+
+// 切到另一組對話（新開的或從紀錄選的）
+function useChat(chat) {
+  messages = chat.messages;
+  streaming = null;
+  updateSendButton();
+  renderMessages();
+}
+
+export async function newConversation() {
+  if (streaming) stop();
+  useChat(await startNew());
+  refreshHistory(currentChat().id);
+  ui.input?.focus();
+}
+
+export async function openConversation(id) {
+  if (streaming) stop();
+  useChat(await switchTo(id));
+  refreshHistory(currentChat().id);
+}
+
+export async function deleteConversation(id) {
+  const wasCurrent = id === currentChat().id;
+  await removeChat(id);
+  if (wasCurrent) useChat(currentChat());
+  refreshHistory(currentChat().id);
 }
 
 // ---- 版面 ----
@@ -104,10 +144,17 @@ function build() {
   header.append(
     title,
     spacer,
+    iconButton(MessageSquarePlus, 'aiNewChat', () => newConversation()),
+    iconButton(History, 'aiHistory', () => toggleHistory(currentChat().id)),
     iconButton(Trash2, 'aiClearChat', clearChat),
     iconButton(Settings, 'settings', () => openAISettings()),
     iconButton(X, 'aiClosePanel', () => toggleAIPanel()),
   );
+
+  const history = document.createElement('div');
+  history.className = 'ai-history';
+  history.id = 'mdb-ai-history';
+  history.hidden = true;
 
   const context = document.createElement('div');
   context.className = 'ai-context';
@@ -144,7 +191,7 @@ function build() {
   sendButton.addEventListener('click', () => (streaming ? stop() : submit()));
   composer.append(input, sendButton);
 
-  panel.replaceChildren(header, context, actions, list, composer);
+  panel.replaceChildren(header, history, context, actions, list, composer);
   ui = { context, list, input, sendButton };
   applyToDom(panel);
   updateSendButton();
@@ -473,10 +520,11 @@ async function applyRewrite(text) {
   app.flashMessage(t('aiApplied'));
 }
 
-function clearChat() {
-  messages = [];
-  saveChat();
-  renderMessages();
+async function clearChat() {
+  if (streaming) stop();
+  await removeChat(currentChat().id);
+  useChat(currentChat());
+  refreshHistory(currentChat().id);
 }
 
 // ---- 初始化 ----
@@ -490,12 +538,9 @@ export async function initAIPanel(appApi, disabled = false) {
     /* 使用預設 */
   }
   if (disabled) layout.open = false; // 公司政策停用 AI 時，面板一律收起
-  try {
-    messages = JSON.parse((await LoadState('ai.chat')) || '{}').messages ?? [];
-  } catch {
-    messages = [];
-  }
-  messages.forEach((m) => (m.done = true));
+  const chat = await initConversations(explorerRoot() ?? '');
+  messages = chat.messages;
+  initHistory(app, { open: openConversation, remove: deleteConversation, create: newConversation });
   applyPanelLayout();
   renderMessages();
   if (app.active) selected = new Set([app.active.id]);
@@ -515,7 +560,14 @@ export async function initAIPanel(appApi, disabled = false) {
     applyPanelLayout();
     renderMessages();
     renderContext();
+    refreshHistory(currentChat().id);
   });
+  app.on('folder', async (root) => {
+    // 換資料夾就換成那個資料夾的對話紀錄（紀錄清單開著就直接更新內容）
+    useChat(await useFolder(root ?? ''));
+    refreshHistory(currentChat().id);
+  });
+  app.onQuit(() => saveCurrent(true));
 
   EventsOn('ai:delta', (id, text) => {
     if (streaming?.id !== id) return;

@@ -1118,6 +1118,7 @@ export const app = {
   on(event, fn) {
     (listeners[event] ??= []).push(fn);
   },
+  emit,
   onQuit(fn) {
     quitHooks.push(fn);
   },

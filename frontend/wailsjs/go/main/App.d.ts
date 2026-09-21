@@ -6,11 +6,15 @@ export function ApplyUpdate():Promise<void>;
 
 export function CancelAIChat(arg1:string):Promise<void>;
 
+export function ChatFolder():Promise<string>;
+
 export function CheckForUpdate():Promise<main.UpdateCheck>;
 
 export function ClearBackups():Promise<void>;
 
 export function DeleteBackup(arg1:string):Promise<void>;
+
+export function DeleteChat(arg1:string):Promise<void>;
 
 export function ExportDialog(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
@@ -32,7 +36,11 @@ export function ListAIModels(arg1:main.AISaveRequest):Promise<Array<string>>;
 
 export function ListBackups():Promise<Array<string>>;
 
+export function ListChats():Promise<Array<main.ChatMeta>>;
+
 export function ListDir(arg1:string):Promise<Array<main.DirEntry>>;
+
+export function LoadChat(arg1:string):Promise<string>;
 
 export function LoadSettings():Promise<main.Settings>;
 
@@ -46,6 +54,8 @@ export function OpenWithDefaultApp(arg1:string):Promise<void>;
 
 export function PathExists(arg1:string):Promise<boolean>;
 
+export function PickChatBackup(arg1:string,arg2:string):Promise<string>;
+
 export function Quit():Promise<void>;
 
 export function ReadFile(arg1:string):Promise<main.Document>;
@@ -56,6 +66,8 @@ export function ResolvePath(arg1:string):Promise<string>;
 
 export function SaveAIConfig(arg1:main.AISaveRequest):Promise<void>;
 
+export function SaveChat(arg1:string,arg2:string):Promise<void>;
+
 export function SaveFile(arg1:string,arg2:string,arg3:boolean,arg4:boolean,arg5:string):Promise<void>;
 
 export function SaveFileDialog(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
@@ -65,6 +77,8 @@ export function SaveSettings(arg1:main.Settings):Promise<void>;
 export function SaveState(arg1:string,arg2:string):Promise<void>;
 
 export function SearchFolder(arg1:string,arg2:main.SearchOptions,arg3:Array<string>):Promise<main.SearchResult>;
+
+export function SetChatFolder(arg1:string):Promise<void>;
 
 export function SetDirty(arg1:boolean):Promise<void>;
 

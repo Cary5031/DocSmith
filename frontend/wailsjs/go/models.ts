@@ -185,6 +185,26 @@ export namespace main {
 	        this.message = source["message"];
 	    }
 	}
+	export class ChatMeta {
+	    id: string;
+	    title: string;
+	    updated: number;
+	    count: number;
+	    backup: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ChatMeta(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.title = source["title"];
+	        this.updated = source["updated"];
+	        this.count = source["count"];
+	        this.backup = source["backup"];
+	    }
+	}
 	export class DirEntry {
 	    name: string;
 	    path: string;

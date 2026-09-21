@@ -121,6 +121,8 @@ const explorer = {
 };
 
 function saveExplorer() {
+  // 讓 AI 面板知道要切到哪個資料夾的對話紀錄
+  app?.emit?.('folder', explorer.root);
   SaveState('explorer', JSON.stringify({ root: explorer.root, expanded: [...explorer.expanded] }));
 }
 
