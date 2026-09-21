@@ -13,3 +13,6 @@ build/bin/*-dev.exe
 
 # DocSmith 尚未發布：exe 不進版本庫（發布時再移除這行）
 build/bin/
+
+# go build ./... 會在專案根目錄留下的執行檔（正式版在 build/bin/）
+/DocSmith.exe
