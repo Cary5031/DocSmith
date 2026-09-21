@@ -15,6 +15,9 @@ function build() {
   const title = document.createElement('h2');
   const summary = document.createElement('p');
   summary.className = 'diff-summary';
+  const warning = document.createElement('p');
+  warning.className = 'diff-warning';
+  warning.hidden = true;
   const body = document.createElement('div');
   body.className = 'diff-body';
   const actions = document.createElement('div');
@@ -25,10 +28,10 @@ function build() {
   const cancel = document.createElement('button');
   cancel.type = 'button';
   actions.append(apply, cancel);
-  box.append(title, summary, body, actions);
+  box.append(title, summary, warning, body, actions);
   root.append(box);
   document.body.append(root);
-  ui = { title, summary, body, apply, cancel };
+  ui = { title, summary, warning, body, apply, cancel };
 }
 
 // 顯示差異；回傳 true 表示使用者選擇套用
@@ -55,6 +58,10 @@ export function showDiff({ title, before, after }) {
   });
   ui.title.textContent = title ?? t('diffTitle');
   ui.summary.textContent = t('diffSummary', { added, removed });
+  // 內容明顯變少時特別提醒：模型常在「修正」時把註解或整段刪掉
+  const shrink = removed - added;
+  ui.warning.textContent = shrink >= 5 ? t('diffShrink', { lines: shrink }) : '';
+  ui.warning.hidden = shrink < 5;
   ui.body.replaceChildren(
     ...visible.map((item) => {
       const row = document.createElement('div');

@@ -186,13 +186,14 @@ const messages = {
     promptTranslateZh:
       '請把目前文件翻譯成繁體中文（台灣用語），保持 Markdown 結構與程式碼不變。把翻譯後的**完整**內容放在一個程式碼區塊中。',
     promptComment:
-      '請為目前的程式碼加上必要的註解（說明用途與不明顯的邏輯），不要改變程式行為。把加上註解後的**完整**程式碼放在一個程式碼區塊中。',
+      '請為目前的程式碼加上必要的註解（說明用途與不明顯的邏輯），不要改變程式行為。保留既有的註解與排版，只補上缺少的部分。把加上註解後的**完整**程式碼放在一個程式碼區塊中。',
     promptFix:
-      '請檢查目前文件或程式碼有沒有錯誤（語法、邏輯、錯字、不一致）。先列出你發現的問題，再把修正後的**完整**內容放在一個程式碼區塊中。',
+      '請檢查目前文件或程式碼有沒有錯誤（語法、邏輯、錯字、不一致）。先列出你發現的問題，再把修正後的**完整**內容放在一個程式碼區塊中。**只修改真正有問題的地方**：原有的註解、空行、命名與排版一律原封不動保留，不要刪除或改寫任何註解，也不要重排無關的程式碼。',
     promptDoc:
       '請分析目前的程式碼，產生一份 Markdown 說明文件，內容包含：用途概述、主要函式 / 類別及其參數與回傳值、資料流程、使用範例、注意事項。只輸出這份 Markdown 文件。',
     diffTitle: '差異比較',
     diffSummary: '新增 {added} 行、刪除 {removed} 行',
+    diffShrink: '注意：套用後會少 {lines} 行，請先確認不是註解或段落被刪掉。',
     diffApply: '套用',
     aiProvider: '供應商',
     aiProviderCustom: '自訂模型',
@@ -443,13 +444,14 @@ const messages = {
     promptTranslateZh:
       'Translate the current document into Traditional Chinese (Taiwan wording), keeping the Markdown structure and code unchanged. Put the **complete** translation in a single code block.',
     promptComment:
-      'Add the comments the current code needs (purpose and non-obvious logic) without changing its behaviour. Put the **complete** commented code in a single code block.',
+      'Add the comments the current code needs (purpose and non-obvious logic) without changing its behaviour. Keep existing comments and formatting as they are and only add what is missing. Put the **complete** commented code in a single code block.',
     promptFix:
-      'Check the current document or code for errors (syntax, logic, typos, inconsistencies). List the problems you found, then put the **complete** corrected content in a single code block.',
+      'Check the current document or code for errors (syntax, logic, typos, inconsistencies). List the problems you found, then put the **complete** corrected content in a single code block. **Change only what is actually wrong**: keep every existing comment, blank line, name and formatting exactly as it is — never delete or reword comments, and do not reformat unrelated code.',
     promptDoc:
       'Analyse the current code and produce a Markdown document covering: what it is for, the main functions / classes with their parameters and return values, the data flow, usage examples and caveats. Output only that Markdown document.',
     diffTitle: 'Differences',
     diffSummary: '{added} lines added, {removed} removed',
+    diffShrink: 'Heads up: applying this removes {lines} lines — check that comments or sections are not being dropped.',
     diffApply: 'Apply',
     aiProvider: 'Provider',
     aiProviderCustom: 'Custom model',

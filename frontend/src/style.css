@@ -2008,3 +2008,12 @@ body[data-kind="ebook"] .tool-group[data-role="tools"] {
   color: var(--muted);
   font-size: 12px;
 }
+
+.diff-warning {
+  margin: -6px 0 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--err-bg);
+  color: var(--err-fg);
+  font-size: 13px;
+}
