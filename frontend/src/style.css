@@ -1895,6 +1895,61 @@ body[data-kind="ebook"] .tool-group[data-role="tools"] {
   cursor: pointer;
 }
 
+/* 整則回覆下方的動作列：把回覆寫進文件 */
+.ai-reply-actions {
+  display: flex;
+  gap: 2px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.ai-mini[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.ai-mini[aria-disabled='true']:hover {
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+.ai-composer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* 送出模式：對話 / 改寫文件 / 新文件 */
+.ai-modes {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.ai-mode {
+  padding: 3px 9px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ai-mode:hover {
+  color: var(--accent);
+}
+
+.ai-mode.on {
+  background: var(--accent);
+  color: #fff;
+}
+
 .ai-composer {
   display: flex;
   flex-direction: column;

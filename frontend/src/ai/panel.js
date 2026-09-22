@@ -29,7 +29,7 @@ const $ = (id) => document.getElementById(id);
 let app = null;
 let panel = null;
 let ui = {};
-let layout = { open: false, width: 400 };
+let layout = { open: false, width: 400, mode: 'chat' }; // mode：這次送出要當成對話、改寫或新文件
 let messages = []; // 目前這組對話的訊息（實際資料在 conversations.js）
 let selected = new Set(); // 勾選的分頁 id
 let streaming = null; // { id, index, mode }
@@ -48,6 +48,40 @@ const QUICK_ACTIONS = [
   { key: 'aiActionFix', mode: 'rewrite', prompt: 'promptFix' },
   { key: 'aiActionDoc', mode: 'newdoc', prompt: 'promptDoc' },
 ];
+
+// ---- 送出模式 ----
+const MODES = [
+  { id: 'chat', key: 'aiModeChat', title: 'aiModeChatTitle' },
+  { id: 'rewrite', key: 'aiModeRewrite', title: 'aiModeRewriteTitle' },
+  { id: 'newdoc', key: 'aiModeNewDoc', title: 'aiModeNewDocTitle' },
+];
+
+function buildModes() {
+  const wrap = document.createElement('div');
+  wrap.className = 'ai-modes';
+  for (const mode of MODES) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ai-mode';
+    b.dataset.mode = mode.id;
+    b.dataset.i18n = mode.key;
+    b.dataset.i18nTitle = mode.title;
+    b.textContent = t(mode.key);
+    b.title = t(mode.title);
+    b.addEventListener('click', () => {
+      layout.mode = mode.id;
+      updateModes();
+      saveLayout();
+      ui.input?.focus();
+    });
+    wrap.append(b);
+  }
+  return wrap;
+}
+
+function updateModes() {
+  ui.modes?.querySelectorAll('.ai-mode').forEach((b) => b.classList.toggle('on', b.dataset.mode === layout.mode));
+}
 
 function saveLayout() {
   SaveState('ai.panel', JSON.stringify(layout));
@@ -217,12 +251,17 @@ function build() {
   sendButton.type = 'button';
   sendButton.className = 'ai-send';
   sendButton.addEventListener('click', () => (streaming ? stop() : submit()));
-  composer.append(input, sendButton);
+  const modes = buildModes();
+  const bottom = document.createElement('div');
+  bottom.className = 'ai-composer-bottom';
+  bottom.append(modes, sendButton);
+  composer.append(input, bottom);
 
   panel.replaceChildren(header, history, context, actions, list, meter, composer);
-  ui = { context, list, input, sendButton, meter, meterFill, meterText, meterAction };
+  ui = { context, list, input, sendButton, modes, meter, meterFill, meterText, meterAction };
   applyToDom(panel);
   updateSendButton();
+  updateModes();
 }
 
 function updateSendButton() {
@@ -429,6 +468,47 @@ function documentFrom(content) {
   return content;
 }
 
+// 整則回覆要寫進文件的文字：模型把文件包在圍籬裡時剝掉外層，純 Markdown 則原樣回傳。
+function replyText(message) {
+  return documentFrom(message.content).trim();
+}
+
+// 整則回覆的動作列：不分模式，回覆結束就能把內容寫進文件。
+function replyActions(message) {
+  const text = replyText(message);
+  if (!text) return null;
+  const bar = document.createElement('div');
+  bar.className = 'ai-reply-actions';
+  const add = (icon, key, onClick, needsEditor = false) => {
+    // 用 aria-disabled 而不是 disabled：停用的按鈕仍要能顯示說明用的 tooltip
+    const guarded = needsEditor
+      ? () => {
+          if (!app.active || !isEditorKind(app.active.kind)) return app.flashMessage(t('aiApplyNeedsEditor'));
+          onClick();
+        }
+      : onClick;
+    const b = iconButton(icon, key, guarded, 'ai-mini');
+    if (needsEditor) b.classList.add('ai-needs-editor');
+    bar.append(b);
+  };
+  add(CornerDownLeft, 'aiInsertAtCursor', () => app.insertText(text), true);
+  add(Replace, 'aiReplaceSelection', () => app.replaceSelection(text), true);
+  // newdoc 的 footer 已經有「開成新分頁」，這裡不重複給
+  if (message.mode !== 'newdoc') add(FileDown, 'aiOpenAsTab', () => app.openDraft(text, 'markdown'));
+  add(ClipboardCopy, 'aiCopy', () => navigator.clipboard?.writeText(text));
+  return bar;
+}
+
+// 目前分頁不是可編輯的文件時，停用會寫進編輯器的那幾顆鈕（切分頁時也會重算）
+function syncReplyActions() {
+  if (!ui.list) return;
+  const editable = Boolean(app.active && isEditorKind(app.active.kind));
+  ui.list.querySelectorAll('.ai-needs-editor').forEach((b) => {
+    b.setAttribute('aria-disabled', String(!editable));
+    b.title = editable ? t(b.dataset.i18nTitle) : t('aiApplyNeedsEditor');
+  });
+}
+
 function actionBar(code, lang, mode) {
   const bar = document.createElement('div');
   bar.className = 'ai-code-actions';
@@ -497,6 +577,11 @@ function renderMessage(message, index) {
     }
     item.append(footer);
   }
+  // 回覆結束（含舊紀錄裡沒有 done 欄位的訊息）就掛上動作列
+  if (message.done !== false) {
+    const actions = replyActions(message);
+    if (actions) item.append(actions);
+  }
   item.dataset.index = index;
   return item;
 }
@@ -504,6 +589,7 @@ function renderMessage(message, index) {
 function renderMessages(keepScroll = false) {
   const atBottom = ui.list.scrollTop + ui.list.clientHeight >= ui.list.scrollHeight - 40;
   ui.list.replaceChildren(...messages.map(renderMessage));
+  syncReplyActions();
   if (!keepScroll || atBottom) ui.list.scrollTop = ui.list.scrollHeight;
 }
 
@@ -520,7 +606,8 @@ function systemMessage() {
   return { role: 'system', content: t('aiSystemPrompt', { lang: getLanguage() === 'en' ? 'English' : '繁體中文' }) };
 }
 
-async function send(prompt, mode = 'chat') {
+// suffix 是「只送出、不顯示」的格式要求，免得對話裡多出一段使用者沒打的字
+async function send(prompt, mode = 'chat', suffix = '') {
   if (streaming) return;
   if (!(await ensureAIConsent())) return;
   const ready = await aiReady();
@@ -533,9 +620,11 @@ async function send(prompt, mode = 'chat') {
   const context = await buildContextMessage();
   messages.push({ role: 'user', content: prompt });
   const history = historyMessages();
+  const sent = prompt + suffix;
   // 文件內容併進「這一次的問題」同一則訊息：有些服務會合併或丟掉連續的 user 訊息，
   // 分開送會讓模型看不到文件。
-  if (context) history[history.length - 1].content = `${context}\n\n---\n\n${prompt}`;
+  if (context) history[history.length - 1].content = `${context}\n\n---\n\n${sent}`;
+  else if (suffix) history[history.length - 1].content = sent;
   const request = [systemMessage(), ...history];
   lastRequest = request;
   const id = `chat-${Date.now()}`;
@@ -554,7 +643,10 @@ function submit() {
   const text = ui.input.value.trim();
   if (!text) return;
   ui.input.value = '';
-  send(text, 'chat');
+  const mode = layout.mode ?? 'chat';
+  // 改寫與新文件要拿到完整內容才套得進文件，所以附上輸出格式的要求
+  const suffix = mode === 'rewrite' ? t('promptModeRewrite') : mode === 'newdoc' ? t('promptModeNewDoc') : '';
+  send(text, mode, suffix);
 }
 
 function stop() {
@@ -615,6 +707,8 @@ export async function initAIPanel(appApi, disabled = false) {
   } catch {
     /* 使用預設 */
   }
+  if (!MODES.some((mode) => mode.id === layout.mode)) layout.mode = 'chat'; // 舊狀態或壞值一律回到對話
+  updateModes();
   if (disabled) layout.open = false; // 公司政策停用 AI 時，面板一律收起
   const chat = await initConversations(explorerRoot() ?? '');
   messages = chat.messages;
@@ -630,6 +724,7 @@ export async function initAIPanel(appApi, disabled = false) {
     // 切換分頁時，預設把新分頁加入參考（使用者仍可自行取消）
     if (tab && selected.size <= 1) selected = new Set([tab.id]);
     if (layout.open) renderContext();
+    syncReplyActions();
   });
   app.on('tabs', () => {
     for (const id of [...selected]) if (!app.tabs.some((tab) => tab.id === id)) selected.delete(id);
