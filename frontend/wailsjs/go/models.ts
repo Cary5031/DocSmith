@@ -37,6 +37,7 @@ export namespace main {
 	    headers: AIHeader[];
 	    thinking: string;
 	    contextLimit: number;
+	    tools: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AIProviderView(source);
@@ -50,6 +51,7 @@ export namespace main {
 	        this.headers = this.convertValues(source["headers"], AIHeader);
 	        this.thinking = source["thinking"];
 	        this.contextLimit = source["contextLimit"];
+	        this.tools = source["tools"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -112,6 +114,7 @@ export namespace main {
 	export class AIMessage {
 	    role: string;
 	    content: string;
+	    reasoning_content?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AIMessage(source);
@@ -121,6 +124,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.role = source["role"];
 	        this.content = source["content"];
+	        this.reasoning_content = source["reasoning_content"];
 	    }
 	}
 	
@@ -135,6 +139,7 @@ export namespace main {
 	    accepted: boolean;
 	    thinking: string;
 	    contextLimit: number;
+	    tools: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AISaveRequest(source);
@@ -151,6 +156,7 @@ export namespace main {
 	        this.accepted = source["accepted"];
 	        this.thinking = source["thinking"];
 	        this.contextLimit = source["contextLimit"];
+	        this.tools = source["tools"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

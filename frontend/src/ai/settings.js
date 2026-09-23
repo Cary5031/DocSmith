@@ -37,7 +37,9 @@ export function aiErrorMessage(err) {
     AI_NETWORK: 'aiNetwork',
     AI_BAD_RESPONSE: 'aiBadResponse',
     AI_NO_MODEL: 'aiNoModel',
+    AI_TOOLS_UNSUPPORTED: 'aiToolsUnsupported',
   };
+  if (code.trim() === 'AI_TOOL_LIMIT') return t('aiToolLimit', { count: detail.trim() });
   const key = known[code.trim()];
   if (key) return t(key) + (detail ? `（${detail.trim()}）` : '');
   if (code.startsWith('AI_HTTP_')) return t('aiHttpError', { status: code.slice(8) }) + (detail ? `（${detail.trim()}）` : '');
@@ -53,6 +55,7 @@ function draftOf(id) {
     headers: (config.providers[id]?.headers ?? []).map((h) => ({ name: h.name, value: KEEP, hint: h.value })),
     thinking: config.providers[id]?.thinking ?? '',
     contextLimit: config.providers[id]?.contextLimit || '',
+    tools: config.providers[id]?.tools ?? false,
     models: [],
   };
   return drafts[id];
@@ -69,6 +72,7 @@ function requestFor(id) {
     headers: d.headers.filter((h) => h.name.trim()).map((h) => ({ name: h.name, value: h.value })),
     thinking: d.thinking,
     contextLimit: Number(d.contextLimit) || 0,
+    tools: Boolean(d.tools),
     accepted: false,
   };
 }
@@ -165,6 +169,18 @@ function build() {
   const contextHint = document.createElement('span');
   contextHint.className = 'form-hint';
 
+  // 允許 AI 使用工具：關閉時請求完全不帶 tools
+  const tools = document.createElement('input');
+  tools.type = 'checkbox';
+  tools.addEventListener('change', () => (draftOf(current).tools = tools.checked));
+  const toolsText = document.createElement('span');
+  toolsText.textContent = t('aiToolsEnable');
+  const toolsLabel = document.createElement('label');
+  toolsLabel.className = 'ai-check';
+  toolsLabel.append(tools, toolsText);
+  const toolsHint = document.createElement('span');
+  toolsHint.className = 'form-hint';
+
   const headers = document.createElement('div');
   headers.className = 'ai-headers';
   const addHeader = document.createElement('button');
@@ -205,13 +221,14 @@ function build() {
     row('aiModel', model, models, fetchModels),
     row('aiThinkingMode', thinking, thinkingNote),
     row('aiContextLimit', contextLimit, contextHint),
+    row('aiTools', toolsLabel, toolsHint),
     row('aiHeaders', headers, addHeader),
     result,
     actions,
   );
   root.append(box);
   document.body.append(root);
-  ui = { provider, baseUrl, key, model, models, thinking, thinkingNote, contextLimit, contextHint, headers, result, policyNote, test, save };
+  ui = { provider, baseUrl, key, model, models, thinking, thinkingNote, contextLimit, contextHint, tools, toolsHint, headers, result, policyNote, test, save };
   root.addEventListener('mousedown', (e) => {
     if (e.target === root) close();
   });
@@ -280,6 +297,8 @@ function render() {
   ui.contextLimit.value = d.contextLimit || '';
   ui.contextLimit.placeholder = String(contextSizeFor(d.model));
   ui.contextHint.textContent = t('aiContextLimitHint');
+  ui.tools.checked = Boolean(d.tools);
+  ui.toolsHint.textContent = t('aiToolsHint');
   renderHeaders();
 
   const notes = [];

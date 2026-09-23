@@ -174,8 +174,8 @@ export function ShowDefaultAppDialog() {
   return window['go']['main']['App']['ShowDefaultAppDialog']();
 }
 
-export function StartAIChat(arg1, arg2) {
-  return window['go']['main']['App']['StartAIChat'](arg1, arg2);
+export function StartAIChat(arg1, arg2, arg3) {
+  return window['go']['main']['App']['StartAIChat'](arg1, arg2, arg3);
 }
 
 export function TestAIConnection(arg1) {

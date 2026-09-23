@@ -39,6 +39,7 @@ type AIProvider struct {
 	Headers      []AIHeader `json:"headers"`
 	Thinking     string     `json:"thinking"`     // 思考模式："" 不指定 / off / low / medium / high
 	ContextLimit int        `json:"contextLimit"` // 對話長度上限（0＝依模型名稱自動判斷）
+	Tools        bool       `json:"tools"`        // 允許 AI 使用工具（預設關閉；關閉時請求不帶 tools）
 }
 
 type AIConfig struct {
@@ -55,6 +56,7 @@ type AIProviderView struct {
 	Headers      []AIHeader `json:"headers"` // 值為遮罩
 	Thinking     string     `json:"thinking"`
 	ContextLimit int        `json:"contextLimit"`
+	Tools        bool       `json:"tools"`
 }
 
 type AIPolicy struct {
@@ -225,7 +227,7 @@ func (a *App) GetAIConfig() *AIConfigView {
 	policy := aiPolicy()
 	view := &AIConfigView{Active: cfg.Active, Accepted: cfg.Accepted, Providers: map[string]*AIProviderView{}, Policy: policy, Defaults: aiDefaults}
 	for id, p := range cfg.Providers {
-		pv := &AIProviderView{BaseURL: p.BaseURL, Model: p.Model, KeyHint: maskSecret(decryptSecret(p.Key)), Thinking: p.Thinking, ContextLimit: p.ContextLimit}
+		pv := &AIProviderView{BaseURL: p.BaseURL, Model: p.Model, KeyHint: maskSecret(decryptSecret(p.Key)), Thinking: p.Thinking, ContextLimit: p.ContextLimit, Tools: p.Tools}
 		for _, h := range p.Headers {
 			pv.Headers = append(pv.Headers, AIHeader{Name: h.Name, Value: maskSecret(decryptSecret(h.Value))})
 		}
@@ -262,6 +264,7 @@ type AISaveRequest struct {
 	Accepted     bool       `json:"accepted"`
 	Thinking     string     `json:"thinking"`
 	ContextLimit int        `json:"contextLimit"`
+	Tools        bool       `json:"tools"`
 }
 
 // SaveAIConfig 儲存單一供應商的設定。
@@ -282,7 +285,7 @@ func (a *App) SaveAIConfig(req AISaveRequest) error {
 	if old == nil {
 		old = &AIProvider{}
 	}
-	p := &AIProvider{BaseURL: strings.TrimSpace(req.BaseURL), Model: strings.TrimSpace(req.Model), Thinking: normalizeThinking(req.Thinking), ContextLimit: max(0, req.ContextLimit)}
+	p := &AIProvider{BaseURL: strings.TrimSpace(req.BaseURL), Model: strings.TrimSpace(req.Model), Thinking: normalizeThinking(req.Thinking), ContextLimit: max(0, req.ContextLimit), Tools: req.Tools}
 	switch req.Key {
 	case keepSecret:
 		p.Key = old.Key
@@ -323,6 +326,7 @@ type aiRequest struct {
 	key      string
 	headers  []AIHeader
 	thinking string // "" / off / low / medium / high
+	tools    bool   // 允許使用工具（一律沿用已儲存的設定）
 }
 
 // 思考模式只接受固定幾個值，其他一律視為「不指定」。
@@ -354,7 +358,7 @@ func resolveRequest(req AISaveRequest) (*aiRequest, error) {
 	if saved == nil {
 		saved = &AIProvider{}
 	}
-	out := &aiRequest{provider: id, baseURL: strings.TrimSpace(req.BaseURL), model: strings.TrimSpace(req.Model), thinking: normalizeThinking(req.Thinking)}
+	out := &aiRequest{provider: id, baseURL: strings.TrimSpace(req.BaseURL), model: strings.TrimSpace(req.Model), thinking: normalizeThinking(req.Thinking), tools: saved.Tools}
 	if req.Thinking == keepSecret {
 		out.thinking = saved.Thinking // 對話呼叫沿用已儲存的設定
 	}
@@ -443,6 +447,27 @@ func aiError(status int, body []byte) error {
 		return fmt.Errorf("AI_RATE_LIMIT|%s", text)
 	}
 	return fmt.Errorf("AI_HTTP_%d|%s", status, text)
+}
+
+// aiToolsError 用在第一次帶 tools 的請求：服務若表明不支援工具呼叫（多半回 400 / 422 並提到 tools 或 function），
+// 改回 AI_TOOLS_UNSUPPORTED，讓前端提示到設定關閉。超過對話長度的錯誤也可能提到 functions，照一般錯誤處理。
+func aiToolsError(status int, body []byte) error {
+	err := aiError(status, body)
+	if status != http.StatusBadRequest && status != http.StatusUnprocessableEntity && status != http.StatusNotImplemented {
+		return err
+	}
+	code, detail, _ := strings.Cut(err.Error(), "|")
+	if !strings.HasPrefix(code, "AI_HTTP_") {
+		return err // 金鑰錯誤之類已經有更明確的代碼
+	}
+	lower := strings.ToLower(string(body))
+	if strings.Contains(lower, "context_length") || strings.Contains(lower, "context length") {
+		return err
+	}
+	if strings.Contains(lower, "tool") || strings.Contains(lower, "function") {
+		return fmt.Errorf("AI_TOOLS_UNSUPPORTED|%s", detail)
+	}
+	return err
 }
 
 // ListAIModels 取得服務上可用的模型清單。

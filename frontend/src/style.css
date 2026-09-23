@@ -2030,6 +2030,26 @@ body[data-kind="ebook"] .tool-group[data-role="tools"] {
 }
 
 /* ---- AI 思考過程 ---- */
+.ai-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.ai-tool-call {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.ai-tool-call > svg {
+  flex: none;
+}
+
 .ai-think {
   margin-bottom: 8px;
   border: 1px dashed var(--border);
@@ -2206,6 +2226,15 @@ body[data-kind="ebook"] .tool-group[data-role="tools"] {
 
 .ai-limit {
   width: 120px;
+}
+
+.ai-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  font-size: 13px;
+  cursor: pointer;
 }
 
 #mdb-version {

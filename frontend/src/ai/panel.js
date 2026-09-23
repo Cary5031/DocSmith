@@ -1,5 +1,5 @@
 // AI 面板（視窗右側）：對話、以開啟的分頁作為討論內容、常用動作、把結果套用到文件。
-import { createElement, Bot, Send, Square, Trash2, Settings, X, ClipboardCopy, CornerDownLeft, Replace, FileDown, MessageSquarePlus, History } from 'lucide';
+import { createElement, Bot, Send, Square, Trash2, Settings, X, ClipboardCopy, CornerDownLeft, Replace, FileDown, MessageSquarePlus, History, Wrench } from 'lucide';
 import { StartAIChat, CancelAIChat, LoadState, SaveState, ImportTargets } from '../../wailsjs/go/main/App';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { t, getLanguage, applyToDom } from '../i18n.js';
@@ -520,6 +520,13 @@ function actionBar(code, lang, mode) {
   return bar;
 }
 
+// 工具名稱的顯示文字；不認得的工具（模型自己編的名稱）直接顯示原名
+const TOOL_LABELS = { list_dir: 'aiToolListDir', read_file: 'aiToolReadFile', search_folder: 'aiToolSearch' };
+
+function toolLabel(name) {
+  return TOOL_LABELS[name] ? t(TOOL_LABELS[name]) : name;
+}
+
 function renderMessage(message, index) {
   const item = document.createElement('div');
   item.className = `ai-message ai-${message.role}` + (message.error ? ' ai-error' : '');
@@ -541,6 +548,20 @@ function renderMessage(message, index) {
     text.textContent = message.think;
     details.append(summary, text);
     item.append(details);
+  }
+  // 工具呼叫：每次一行，讓使用者知道模型正在查什麼
+  if (message.tools?.length) {
+    const list = document.createElement('div');
+    list.className = 'ai-tools';
+    for (const call of message.tools) {
+      const line = document.createElement('div');
+      line.className = 'ai-tool-call';
+      const label = toolLabel(call.name);
+      const text = call.detail ? t('aiToolCall', { tool: label, detail: call.detail }) : label;
+      line.append(createElement(Wrench, { width: 13, height: 13 }), document.createTextNode(text));
+      list.append(line);
+    }
+    item.append(list);
   }
   const body = document.createElement('div');
   body.className = 'markdown-body ai-markdown';
@@ -594,12 +615,13 @@ function renderMessages(keepScroll = false) {
 }
 
 // ---- 送出與串流 ----
-// 會帶進請求的歷史訊息（去掉錯誤訊息，只留最近幾則）
+// 會帶進請求的歷史訊息（去掉錯誤訊息，只留最近幾則）。
+// 回覆的思考內容一併附上：DeepSeek 開工具時必須送回，其他情況 Go 端會拿掉，請求不變
 function historyMessages() {
   return messages
     .filter((m) => !m.error)
     .slice(-MAX_HISTORY)
-    .map(({ role, content }) => ({ role, content }));
+    .map(({ role, content, think }) => (role === 'assistant' && think ? { role, content, reasoning_content: think } : { role, content }));
 }
 
 function systemMessage() {
@@ -633,7 +655,7 @@ async function send(prompt, mode = 'chat', suffix = '') {
   updateSendButton();
   renderMessages();
   try {
-    await StartAIChat(id, request);
+    await StartAIChat(id, request, explorerRoot() ?? '');
   } catch (err) {
     finishStreaming(aiErrorMessage(err), true);
   }
@@ -758,6 +780,12 @@ export async function initAIPanel(appApi, disabled = false) {
     if (streaming?.id !== id) return;
     const message = messages[streaming.index];
     message.think = (message.think ?? '') + text;
+    renderMessages(true);
+  });
+  EventsOn('ai:tool', (id, name, detail) => {
+    if (streaming?.id !== id) return;
+    const message = messages[streaming.index];
+    (message.tools ??= []).push({ name, detail });
     renderMessages(true);
   });
   EventsOn('ai:usage', (id, prompt) => {

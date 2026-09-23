@@ -88,7 +88,7 @@ export function SetTitleBarDark(arg1:boolean):Promise<void>;
 
 export function ShowDefaultAppDialog():Promise<void>;
 
-export function StartAIChat(arg1:string,arg2:Array<main.AIMessage>):Promise<void>;
+export function StartAIChat(arg1:string,arg2:Array<main.AIMessage>,arg3:string):Promise<void>;
 
 export function TestAIConnection(arg1:main.AISaveRequest):Promise<main.AITestResult>;
 
