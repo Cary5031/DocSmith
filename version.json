@@ -1,10 +1,10 @@
 {
-  "version": "1.0.2",
+  "version": "1.1.0",
   "releaseDate": "2026-09-23",
   "downloadUrl": "https://github.com/Cary5031/DocSmith/raw/main/build/bin/DocSmith.exe",
-  "sha256": "a2ef3552b90b837b1c70641122d3a00465d9a683ce315046ed70f370e0dda257",
+  "sha256": "3a24b553c67780fb0f30d0d69448f90963533d0bd2475fb0f75eea4a227238cd",
   "notes": {
-    "zh-TW": "DocSmith 1.0.2：AI 每則回覆都能直接插入文件、取代選取範圍或開成新分頁；輸入框可先指定「對話／改寫文件／新文件」再送出。",
-    "en": "DocSmith 1.0.2: every AI reply can be inserted into the document, replace the selection, or open as a new tab; the input box can preset chat, rewrite, or new-document mode."
+    "zh-TW": "DocSmith 1.1.0：AI 可以使用工具。在 AI 設定勾選「允許 AI 使用工具」後，AI 能列出、讀取、搜尋側邊欄開啟的資料夾（唯讀），回覆上方會列出它查了哪些東西。",
+    "en": "DocSmith 1.1.0: the AI can now use tools. Turn on 'Let the AI use tools' in AI settings and it can list, read and search the folder open in the sidebar (read-only); each lookup is shown above its reply."
   }
 }
