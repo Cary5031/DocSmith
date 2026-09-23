@@ -1,10 +1,10 @@
 {
-  "version": "1.0.1",
-  "releaseDate": "2026-09-21",
+  "version": "1.0.2",
+  "releaseDate": "2026-09-23",
   "downloadUrl": "https://github.com/Cary5031/DocSmith/raw/main/build/bin/DocSmith.exe",
-  "sha256": "6ab3290fa30268dd7d7e4141db6f10c61520b899f9f3bce0ebe1eb4600298e16",
+  "sha256": "a2ef3552b90b837b1c70641122d3a00465d9a683ce315046ed70f370e0dda257",
   "notes": {
-    "zh-TW": "DocSmith 1.0.1：狀態列顯示版本號，點一下可看「關於」並手動檢查更新。",
-    "en": "DocSmith 1.0.1: the status bar now shows the version; click it for About and a manual update check."
+    "zh-TW": "DocSmith 1.0.2：AI 每則回覆都能直接插入文件、取代選取範圍或開成新分頁；輸入框可先指定「對話／改寫文件／新文件」再送出。",
+    "en": "DocSmith 1.0.2: every AI reply can be inserted into the document, replace the selection, or open as a new tab; the input box can preset chat, rewrite, or new-document mode."
   }
 }

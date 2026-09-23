@@ -13,3 +13,6 @@ build/bin/*-dev.exe
 
 # go build ./... 會在專案根目錄留下的執行檔（正式版在 build/bin/）
 /DocSmith.exe
+
+# VS Code 個人工作區檔
+DocSmith.code-workspace
