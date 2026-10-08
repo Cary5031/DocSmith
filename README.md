@@ -36,3 +36,7 @@ go test ./...              # Go 測試
 ## 隱私
 
 設定、對話與備份都存在本機（`%APPDATA%\DocSmith\` 與專案的 `.DocSmith\`）。使用 AI 功能時，只有你勾選的分頁內容與問題會送到你自己設定的服務；API 金鑰以 Windows DPAPI 加密存放。公司可用登錄機碼 `HKLM\SOFTWARE\Policies\DocSmith` 停用 AI 或限制可用的服務。
+
+## 授權
+
+[MIT](LICENSE) © 2026 CaryLee
