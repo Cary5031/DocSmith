@@ -20,8 +20,6 @@ import (
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
-	"golang.org/x/sys/windows"
-	"golang.org/x/sys/windows/registry"
 )
 
 // 編譯時內嵌的版本資訊（publish.ps1 會先更新 version.json 再建置）
@@ -90,33 +88,7 @@ func systemProxy(req *http.Request) (*url.URL, error) {
 	if p, err := http.ProxyFromEnvironment(req); p != nil || err != nil {
 		return p, err
 	}
-	k, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Internet Settings`, registry.QUERY_VALUE)
-	if err != nil {
-		return nil, nil
-	}
-	defer k.Close()
-	if enabled, _, err := k.GetIntegerValue("ProxyEnable"); err != nil || enabled == 0 {
-		return nil, nil
-	}
-	server, _, err := k.GetStringValue("ProxyServer")
-	if err != nil || server == "" {
-		return nil, nil
-	}
-	// 可能是 "host:port" 或 "http=host:port;https=host:port"
-	for _, part := range strings.Split(server, ";") {
-		if kv := strings.SplitN(part, "=", 2); len(kv) == 2 {
-			if kv[0] == "https" {
-				server = kv[1]
-				break
-			}
-		} else {
-			server = part
-		}
-	}
-	if !strings.Contains(server, "://") {
-		server = "http://" + server
-	}
-	return url.Parse(server)
+	return platformProxy()
 }
 
 var httpClient = &http.Client{Transport: &http.Transport{Proxy: systemProxy}}
@@ -258,6 +230,9 @@ func verifyDownload(path string, sum []byte, expected string) error {
 // ApplyUpdate 下載新版並替換目前的 exe，成功後重新啟動成新版並結束目前程式。
 // 前端須先確認所有未存檔分頁。
 func (a *App) ApplyUpdate() error {
+	if err := ensureUpdateSupported(); err != nil {
+		return err
+	}
 	check, err := a.CheckForUpdate()
 	if err != nil {
 		return err
@@ -306,33 +281,12 @@ func (a *App) ApplyUpdate() error {
 	return nil
 }
 
-// applyElevated 沒有寫入權限時，以系統管理員身分（UAC）執行 PowerShell 完成替換並重新啟動。
-func (a *App) applyElevated(exe, newFile string) error {
-	quote := func(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
-	script := fmt.Sprintf(
-		"$ErrorActionPreference='Stop'; Wait-Process -Id %d -Timeout 30 -ErrorAction SilentlyContinue; "+
-			"Move-Item -Force -LiteralPath %s -Destination %s; Move-Item -Force -LiteralPath %s -Destination %s; "+
-			"Start-Process -FilePath %s -ArgumentList '--updated'",
-		os.Getpid(), quote(exe), quote(exe+".old"), quote(newFile), quote(exe), quote(exe))
-	verb, _ := windows.UTF16PtrFromString("runas")
-	file, _ := windows.UTF16PtrFromString("powershell.exe")
-	args, _ := windows.UTF16PtrFromString("-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"" + script + "\"")
-	if err := windows.ShellExecute(0, verb, file, args, nil, windows.SW_HIDE); err != nil {
-		return err // 使用者在 UAC 按「否」
-	}
-	a.Quit()
-	return nil
-}
-
 // prepareAfterUpdate 在 wails 啟動前執行：等待舊版結束（避免單一執行個體鎖把自己轉交給舊版），並清除 .old。
 func prepareAfterUpdate() {
 	for _, arg := range os.Args[1:] {
 		if pid, ok := strings.CutPrefix(arg, "--wait-pid="); ok {
 			if n, err := strconv.Atoi(pid); err == nil {
-				if h, err := windows.OpenProcess(windows.SYNCHRONIZE, false, uint32(n)); err == nil {
-					windows.WaitForSingleObject(h, 15000)
-					windows.CloseHandle(h)
-				}
+				waitPid(n, 15*time.Second)
 			}
 		}
 	}

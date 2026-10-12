@@ -6,7 +6,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,10 +13,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"unsafe"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
-	xwin "golang.org/x/sys/windows"
 )
 
 // AI 對話的存放：
@@ -127,29 +124,6 @@ func gunzipBytes(raw []byte) ([]byte, error) {
 	}
 	defer r.Close()
 	return io.ReadAll(r)
-}
-
-// protectBytes / unprotectBytes 是 DPAPI 的位元組版本（金鑰用的是字串版）。
-func protectBytes(raw []byte) ([]byte, error) {
-	in := newBlob(raw)
-	var out dataBlob
-	r, _, err := procCryptProtect.Call(uintptr(unsafe.Pointer(&in)), 0, 0, 0, 0, 0, uintptr(unsafe.Pointer(&out)))
-	if r == 0 {
-		return nil, fmt.Errorf("CryptProtectData: %v", err)
-	}
-	defer xwin.LocalFree(xwin.Handle(unsafe.Pointer(out.data)))
-	return out.bytes(), nil
-}
-
-func unprotectBytes(raw []byte) ([]byte, error) {
-	in := newBlob(raw)
-	var out dataBlob
-	r, _, err := procCryptUnprotec.Call(uintptr(unsafe.Pointer(&in)), 0, 0, 0, 0, 0, uintptr(unsafe.Pointer(&out)))
-	if r == 0 {
-		return nil, fmt.Errorf("CryptUnprotectData: %v", err)
-	}
-	defer xwin.LocalFree(xwin.Handle(unsafe.Pointer(out.data)))
-	return out.bytes(), nil
 }
 
 // ---- 讀寫 ----

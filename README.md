@@ -33,9 +33,19 @@ go test ./...              # Go 測試
 
 產品名稱與 GitHub repo 集中在 `names.go` 與 `frontend/src/i18n.js` 的 `appName`。
 
+## Linux / Omarchy
+
+這份 fork 可以在 Linux 上編譯。需要 Go 1.25+、Node.js 20.19+、GTK 3、WebKitGTK 4.1，以及 wails v2.16。
+
+```bash
+wails build -tags webkit2_41
+```
+
+執行檔是 `build/bin/DocSmith`。設定、金鑰與對話備份放在 `~/.config/DocSmith/`（金鑰檔為 `secret.key`，不跟專案走）。PDF 匯出使用系統已安裝的 Chrome、Chromium 或 Brave。程式內自動更新只下載 Windows 的 `DocSmith.exe`，在 Linux 上不會執行。
+
 ## 隱私
 
-設定、對話與備份都存在本機（`%APPDATA%\DocSmith\` 與專案的 `.DocSmith\`）。使用 AI 功能時，只有你勾選的分頁內容與問題會送到你自己設定的服務；API 金鑰以 Windows DPAPI 加密存放。公司可用登錄機碼 `HKLM\SOFTWARE\Policies\DocSmith` 停用 AI 或限制可用的服務。
+設定、對話與備份都存在本機（Windows 為 `%APPDATA%\DocSmith\`，Linux 為 `~/.config/DocSmith/`，另外還有專案的 `.DocSmith\`）。使用 AI 功能時，只有你勾選的分頁內容與問題會送到你自己設定的服務。API 金鑰在 Windows 以 DPAPI 加密，在 Linux 以 `secret.key` 加密。公司在 Windows 可用登錄機碼 `HKLM\SOFTWARE\Policies\DocSmith` 停用 AI 或限制可用的服務。
 
 ## 授權
 

@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,10 +12,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unsafe"
-
-	xwin "golang.org/x/sys/windows"
-	"golang.org/x/sys/windows/registry"
 )
 
 // AI 服務設定（%APPDATA%\DocSmith\ai.json）。
@@ -85,67 +80,6 @@ func aiConfigPath() string {
 	return filepath.Join(configDir(), "ai.json")
 }
 
-// ---- DPAPI ----
-var (
-	crypt32           = xwin.NewLazySystemDLL("crypt32.dll")
-	procCryptProtect  = crypt32.NewProc("CryptProtectData")
-	procCryptUnprotec = crypt32.NewProc("CryptUnprotectData")
-)
-
-type dataBlob struct {
-	size uint32
-	data *byte
-}
-
-func newBlob(b []byte) dataBlob {
-	if len(b) == 0 {
-		return dataBlob{}
-	}
-	return dataBlob{size: uint32(len(b)), data: &b[0]}
-}
-
-func (b dataBlob) bytes() []byte {
-	if b.size == 0 || b.data == nil {
-		return nil
-	}
-	out := make([]byte, b.size)
-	copy(out, unsafe.Slice(b.data, b.size))
-	return out
-}
-
-// encryptSecret 以目前 Windows 帳號加密（DPAPI），輸出 base64。
-func encryptSecret(plain string) string {
-	if plain == "" {
-		return ""
-	}
-	in := newBlob([]byte(plain))
-	var out dataBlob
-	r, _, _ := procCryptProtect.Call(uintptr(unsafe.Pointer(&in)), 0, 0, 0, 0, 0, uintptr(unsafe.Pointer(&out)))
-	if r == 0 {
-		return ""
-	}
-	defer xwin.LocalFree(xwin.Handle(unsafe.Pointer(out.data)))
-	return base64.StdEncoding.EncodeToString(out.bytes())
-}
-
-func decryptSecret(encoded string) string {
-	if encoded == "" {
-		return ""
-	}
-	raw, err := base64.StdEncoding.DecodeString(encoded)
-	if err != nil {
-		return ""
-	}
-	in := newBlob(raw)
-	var out dataBlob
-	r, _, _ := procCryptUnprotec.Call(uintptr(unsafe.Pointer(&in)), 0, 0, 0, 0, 0, uintptr(unsafe.Pointer(&out)))
-	if r == 0 {
-		return ""
-	}
-	defer xwin.LocalFree(xwin.Handle(unsafe.Pointer(out.data)))
-	return string(out.bytes())
-}
-
 func maskSecret(s string) string {
 	if s == "" {
 		return ""
@@ -190,33 +124,6 @@ func writeAIConfig(cfg *AIConfig) error {
 		return err
 	}
 	return os.Rename(tmp, aiConfigPath())
-}
-
-// aiPolicy 讀取公司政策（HKLM 優先，其次 HKCU）。
-func aiPolicy() AIPolicy {
-	policy := AIPolicy{}
-	for _, root := range []registry.Key{registry.CURRENT_USER, registry.LOCAL_MACHINE} {
-		k, err := registry.OpenKey(root, `SOFTWARE\Policies\`+productID, registry.QUERY_VALUE)
-		if err != nil {
-			continue
-		}
-		if v, _, err := k.GetIntegerValue("DisableAI"); err == nil && v != 0 {
-			policy.Disabled = true
-		}
-		if v, _, err := k.GetStringValue("AllowedAIProviders"); err == nil && strings.TrimSpace(v) != "" {
-			policy.AllowedProviders = nil
-			for _, id := range strings.Split(v, ",") {
-				if id = strings.TrimSpace(strings.ToLower(id)); aiDefaults[id] != "" || id == "custom" {
-					policy.AllowedProviders = append(policy.AllowedProviders, id)
-				}
-			}
-		}
-		if v, _, err := k.GetStringValue("CustomBaseURL"); err == nil && strings.TrimSpace(v) != "" {
-			policy.LockedBaseURL = strings.TrimSpace(v)
-		}
-		k.Close()
-	}
-	return policy
 }
 
 // GetAIConfig 回傳設定（金鑰以遮罩呈現）與公司政策。
