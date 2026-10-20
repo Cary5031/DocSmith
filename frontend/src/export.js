@@ -38,7 +38,18 @@ function blobToDataUrl(blob) {
   });
 }
 
+// 只允許 http/https，避免匯出時被誘導讀取本機檔案（file:）或其他特殊協定資源
+function isSafeFetchUrl(url) {
+  try {
+    const parsed = new URL(url, location.href);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 async function fetchDataUrl(url) {
+  if (!isSafeFetchUrl(url)) throw new Error(`Unsafe URL: ${url}`);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${res.status} ${url}`);
   return blobToDataUrl(await res.blob());
