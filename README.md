@@ -8,6 +8,7 @@
 
 - **Markdown 編輯與預覽**：即時排版、滾動同步、Mermaid 圖表、KaTeX 數學公式、程式碼高亮
 - **多分頁與工作階段還原**：關掉再開，分頁、游標位置、閱讀進度都回來；當機也能還原未存檔內容
+- **重新載入**：工具列按鈕或 `F5` 從磁碟重讀目前的檔案（PDF、電子書也保留閱讀位置）；檔案被其他程式修改時會跳出提示
 - **閱讀器**：PDF（縮圖、目錄、全文搜尋）與電子書 EPUB / MOBI / AZW3 / FB2 / CBZ（真正的分頁排版、字級行距、書籤）
 - **文件轉換**：Word / Excel / PowerPoint / PDF / HTML / CSV 轉成 Markdown；Markdown 匯出成 PDF / Word
 - **程式碼**：依副檔名上色，`Shift+Alt+F` 依文件類型自動排版（Prettier、gofmt、Ruff、clang-format、sql-formatter…）
