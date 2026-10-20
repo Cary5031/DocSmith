@@ -20,11 +20,13 @@
 
 下載 [`build/bin/DocSmith.exe`](build/bin/DocSmith.exe) 放到任意資料夾，雙擊即可使用，不需安裝、不需執行階段元件。
 
+Linux / Omarchy 沒有對應的單一執行檔，需自行編譯。步驟、與 Windows 的差異、資料目錄見 [Linux 說明](docs/linux.md)。
+
 完整說明見 [操作手冊](docs/manual/操作手冊.md)（另有 [PDF](docs/manual/DocSmith%20操作手冊.pdf) 與 [Word](docs/manual/DocSmith%20操作手冊.docx) 版本）。
 
 ## 開發
 
-需求：Go 1.23+、Node.js 20.19+、wails CLI（`go install github.com/wailsapp/wails/v2/cmd/wails@latest`）
+需求：Go 1.25+、Node.js 20.19+、wails CLI（`go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0`）
 
 ```powershell
 wails dev                  # 開發模式
@@ -34,9 +36,17 @@ go test ./...              # Go 測試
 
 產品名稱與 GitHub repo 集中在 `names.go` 與 `frontend/src/i18n.js` 的 `appName`。
 
+## Linux / Omarchy
+
+```bash
+wails build -tags webkit2_41
+```
+
+需要 GTK 3 與 WebKitGTK 4.1。完整的安裝步驟、資料位置，以及和 Windows 版的差異見 [docs/linux.md](docs/linux.md)。
+
 ## 隱私
 
-設定、對話與備份都存在本機（`%APPDATA%\DocSmith\` 與專案的 `.DocSmith\`）。使用 AI 功能時，只有你勾選的分頁內容與問題會送到你自己設定的服務；API 金鑰以 Windows DPAPI 加密存放。公司可用登錄機碼 `HKLM\SOFTWARE\Policies\DocSmith` 停用 AI 或限制可用的服務。
+設定、對話與備份都存在本機（Windows 為 `%APPDATA%\DocSmith\`，Linux 為 `~/.config/DocSmith/`，另外還有專案的 `.DocSmith\`）。使用 AI 功能時，只有你勾選的分頁內容與問題會送到你自己設定的服務。API 金鑰在 Windows 以 DPAPI 加密，在 Linux 以 `secret.key` 加密。公司在 Windows 可用登錄機碼 `HKLM\SOFTWARE\Policies\DocSmith` 停用 AI 或限制可用的服務。
 
 ## 授權
 

@@ -1,10 +1,11 @@
+//go:build windows
+
 package main
 
 import (
 	"os"
 	"unsafe"
 
-	"github.com/wailsapp/wails/v2/pkg/options/windows"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	xwin "golang.org/x/sys/windows"
 )
@@ -76,16 +77,4 @@ func (a *App) SetTitleBarDark(dark bool) {
 	}
 	procSendMessage.Call(hwnd, wmNCActivate, 1-active, 0)
 	procSendMessage.Call(hwnd, wmNCActivate, active, 0)
-}
-
-// initialTheme 依上次的設定決定建立視窗時的標題列主題，避免啟動時先閃一下亮色。
-func initialTheme() windows.Theme {
-	switch loadSettings().Theme {
-	case "dark":
-		return windows.Dark
-	case "light":
-		return windows.Light
-	default:
-		return windows.SystemDefault
-	}
 }
