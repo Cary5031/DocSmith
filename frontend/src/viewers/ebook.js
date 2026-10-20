@@ -502,9 +502,9 @@ export const ebookViewer = {
       doc.addEventListener('keydown', (ev) => {
         if (handleKey(ctx, ev)) {
           ev.preventDefault();
-        } else if (ev.ctrlKey || ev.metaKey) {
-          // 其餘 Ctrl 快捷鍵（Ctrl+W、Ctrl+Tab…）交給主程式
-          document.dispatchEvent(new KeyboardEvent('keydown', { key: ev.key, ctrlKey: true, shiftKey: ev.shiftKey, bubbles: true }));
+        } else if (ev.ctrlKey || ev.metaKey || ev.key === 'F5') {
+          // 其餘 Ctrl 快捷鍵（Ctrl+W、Ctrl+Tab…）與 F5（重新載入）交給主程式
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: ev.key, ctrlKey: ev.ctrlKey || ev.metaKey, shiftKey: ev.shiftKey, repeat: ev.repeat, bubbles: true }));
           ev.preventDefault();
         }
       });

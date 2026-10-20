@@ -169,7 +169,8 @@ function markThumbnail(ctx) {
 }
 
 export const pdfViewer = {
-  async open(tab, el, path, app) {
+  // position：重新載入時要回到的頁數與縮放（見 position()）
+  async open(tab, el, path, app, position = null) {
     await loadLibraries();
     const { EventBus, PDFLinkService, PDFFindController, PDFViewer } = viewerLib;
     const ctx = { ui: {}, app };
@@ -231,7 +232,8 @@ export const pdfViewer = {
 
     const bus = ctx.eventBus;
     bus.on('pagesinit', () => {
-      ctx.viewer.currentScaleValue = 'page-width';
+      ctx.viewer.currentScaleValue = position?.scale || 'page-width';
+      if (position?.page) ctx.viewer.currentPageNumber = Math.min(position.page, ctx.doc.numPages);
     });
     bus.on('pagechanging', ({ pageNumber }) => {
       ctx.ui.page.value = pageNumber;
@@ -271,6 +273,13 @@ export const pdfViewer = {
     };
     walk(await ctx.doc.getOutline(), 0);
     return out;
+  },
+
+  // 目前的頁數與縮放，重新載入時交回給 open()
+  position(tab) {
+    const ctx = tab.pdf;
+    if (!ctx?.doc) return null;
+    return { page: ctx.viewer.currentPageNumber, scale: ctx.viewer.currentScaleValue };
   },
 
   status(tab) {

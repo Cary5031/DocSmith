@@ -6,11 +6,11 @@ import {
   List, ListOrdered, ListTodo, TextQuote,
   Code, SquareCode, Link, Image, Table, Minus,
   PenLine, Columns2, Eye, Languages, Sigma, Plus, X, FileDown, FileText, FileOutput, Sun, Moon, Monitor, Square, Copy,
-  WandSparkles, Settings, Bot,
+  WandSparkles, Settings, Bot, RefreshCw,
 } from 'lucide';
 import {
   GetStartupFiles, LoadSettings, SaveSettings, OpenFileDialog, SaveFileDialog,
-  ReadFile, SaveFile, SetDirty, SetDocPath, ResolvePath, Quit,
+  ReadFile, SaveFile, SetDirty, SetDocPath, ResolvePath, Quit, PathExists, FileStamp, IsForeground,
   ExportDialog, ExportPDF, WriteBase64File, OpenWithDefaultApp, ImportTargets,
   IsDefaultMarkdownApp, ShowDefaultAppDialog,
   CheckForUpdate, ApplyUpdate, WasUpdated, GetVersion, SetTitleBarDark,
@@ -36,6 +36,7 @@ import { initAISettings, openAISettings } from './ai/settings.js';
 import { initAIPanel, toggleAIPanel } from './ai/panel.js';
 import { GetAIConfig } from '../wailsjs/go/main/App';
 import { EditorView } from '@codemirror/view';
+import { isolateHistory } from '@codemirror/commands';
 
 const REPO_URL = 'https://github.com/Cary5031/DocSmith'; // 關於視窗與自動更新的專案頁面
 
@@ -525,7 +526,7 @@ async function openPath(path) {
       await showError(t('unsupportedFile', { name: fileName(path) }));
       return;
     }
-    const tab = await openAsTab({ path, kind });
+    const tab = await openAsTab({ path, kind, stamp: await FileStamp(path) });
     try {
       await viewers[kind].open(tab, tab.viewerEl, path, app);
     } catch (err) {
@@ -537,6 +538,8 @@ async function openPath(path) {
     emit('active', tab); // 閱讀器載入完成，大綱等可以更新
     return;
   }
+  // 檔案狀態在讀檔前取得：讀檔當下剛好被改，之後的檢查仍會發現
+  const stamp = await FileStamp(path);
   let d;
   try {
     d = await ReadFile(path);
@@ -545,7 +548,7 @@ async function openPath(path) {
     await showError(message.includes('BINARY_FILE') ? t('notTextFile', { name: fileName(path) }) : t('openFailed', { error: message }));
     return;
   }
-  await openAsTab({ path: d.path, encoding: d.encoding, crlf: d.crlf, bom: d.bom }, d.content);
+  await openAsTab({ path: d.path, encoding: d.encoding, crlf: d.crlf, bom: d.bom, stamp }, d.content);
 }
 
 // 轉換文件成 Markdown，開成未存檔的新分頁（預設存到原檔旁的「原檔名.md」）
@@ -598,6 +601,8 @@ async function writeTo(path) {
   tab.encoding = encoding;
   tab.savedDoc = view.state.doc;
   tab.dirty = false;
+  // 自己存的檔不算外部修改（savedDoc 已先更新，取狀態期間剛好檢查也只會比對到相同內容）
+  tab.stamp = await FileStamp(path);
   syncGlobalDirty();
   if (pathChanged) {
     SetDocPath(path);
@@ -626,6 +631,160 @@ async function saveAs() {
   const ok = await writeTo(path);
   if (ok && duplicate) await removeTab(duplicate);
   return ok;
+}
+
+// ---- 重新載入（從磁碟重讀目前分頁）----
+let reloading = false;
+
+// confirmed：由「檔案已被修改」提示呼叫時，使用者已經同意，不再詢問是否捨棄變更
+async function reloadActive({ confirmed = false } = {}) {
+  if (reloading || modalOpen) return;
+  const tab = active;
+  if (!tab.path) {
+    flashMessage(t('reloadUntitled'));
+    return;
+  }
+  reloading = true;
+  try {
+    if (!(await PathExists(tab.path))) {
+      await showError(t('reloadNotFound', { name: fileName(tab.path) }));
+      return;
+    }
+    if (isEditorKind(tab.kind)) await reloadText(tab, confirmed);
+    else await reloadViewer(tab);
+  } finally {
+    reloading = false;
+  }
+}
+
+// 閱讀器：關掉原本的閱讀器、清空容器後重新開啟同一個檔案；
+// 閱讀位置由各閱讀器處理（PDF 透過 position()，電子書沿用既有的位置紀錄）
+async function reloadViewer(tab) {
+  const viewer = viewers[tab.kind];
+  const position = viewer.position?.(tab);
+  try {
+    viewer.destroy?.(tab);
+  } catch (err) {
+    console.error(err);
+  }
+  tab.viewerEl.replaceChildren();
+  tab.viewerEl.className = 'viewer';
+  window.focus(); // 焦點原本在被移除的電子書內文（iframe）時，拉回主頁面
+  const stamp = await FileStamp(tab.path);
+  try {
+    await viewer.open(tab, tab.viewerEl, tab.path, app, position);
+  } catch (err) {
+    await showError(t('openFailed', { error: String(err?.message ?? err) }));
+    return;
+  }
+  tab.stamp = stamp;
+  if (active !== tab) return;
+  viewer.onActivate?.(tab);
+  updateStatusInfo();
+  emit('active', tab); // 閱讀器重新載入完成，大綱等可以更新
+  flashMessage(t('reloaded'));
+}
+
+// ---- 偵測檔案被其他程式修改 ----
+// 比對修改時間與大小（tab.stamp 在開檔、存檔、重新載入時記下）；只檢查目前的分頁，
+// 視窗在前景時才檢查（見 init），外部程式改到一半不會跳視窗。
+const CHANGE_CHECK_INTERVAL = 2000;
+let checkingChange = false;
+
+function sameStamp(a, b) {
+  if (!a?.exists || !b?.exists) return Boolean(a?.exists) === Boolean(b?.exists);
+  return a.modTime === b.modTime && a.size === b.size;
+}
+
+// 有任何對話框開著（包含 AI 設定、差異比較）時不提示，避免疊出第二個視窗
+const anyDialogOpen = () => modalOpen || Boolean(document.querySelector('.modal-backdrop:not([hidden])'));
+
+// 焦點所在的 iframe（電子書內文）被移除後，document.hasFocus() 會一直是 false，這時改問 Go 端
+const inForeground = async () => document.hasFocus() || (await IsForeground());
+
+async function checkExternalChange() {
+  const tab = active;
+  if (checkingChange || reloading || !tab?.path || anyDialogOpen()) return;
+  checkingChange = true;
+  try {
+    if (!(await inForeground())) return;
+    const now = await FileStamp(tab.path);
+    // 檔案被刪除或移走時不提示（沒有東西可以載入），之後又出現且內容不同才提示
+    if (!now.exists || sameStamp(now, tab.stamp) || active !== tab || !tabs.includes(tab)) return;
+    if (isEditorKind(tab.kind)) {
+      let d;
+      try {
+        d = await ReadFile(tab.path);
+      } catch {
+        return; // 讀不到（例如正在寫入）就等下一次檢查
+      }
+      // 內容與最後載入 / 存檔的版本相同（例如只是修改時間變了）：默默更新狀態
+      if (d.content === tab.savedDoc.toString() && d.encoding === tab.encoding && d.crlf === tab.crlf && d.bom === tab.bom) {
+        tab.stamp = now;
+        return;
+      }
+    }
+    // 讀檔期間使用者可能已經按 F5 重新載入（狀態已更新）或開了其他對話框
+    if (active !== tab || reloading || anyDialogOpen() || sameStamp(now, tab.stamp)) return;
+    const key = tab.dirty ? 'fileChangedDirtyMessage' : 'fileChangedMessage';
+    const answer = await showModal(t('fileChangedTitle'), t(key, { name: fileName(tab.path) }), [
+      { label: t('btnReload'), value: 'reload', primary: true },
+      { label: t('btnKeepCurrent'), value: 'keep' },
+    ], 'keep');
+    if (answer === 'reload' && active === tab) {
+      await reloadActive({ confirmed: true });
+    } else {
+      tab.stamp = now; // 保留目前內容：同一次修改不再提示，檔案之後又被改才會再問
+    }
+  } finally {
+    checkingChange = false;
+  }
+}
+
+// 先讀檔，讀不到就不動內容；只替換有差異的範圍，游標與捲動位置不跳；可用 Ctrl+Z 回到重讀前的內容
+async function reloadText(tab, confirmed) {
+  const stamp = await FileStamp(tab.path);
+  let d;
+  try {
+    d = await ReadFile(tab.path);
+  } catch (err) {
+    const message = String(err?.message ?? err);
+    await showError(message.includes('BINARY_FILE') ? t('notTextFile', { name: fileName(tab.path) }) : t('openFailed', { error: message }));
+    return;
+  }
+  if (active !== tab) return; // 讀檔期間切換了分頁
+  // 使用者已經看到這一版：不論重新載入或取消，同一次修改都不再自動提示
+  tab.stamp = stamp;
+  if (tab.dirty && !confirmed && view.state.doc.toString() !== d.content) {
+    const answer = await showModal(t('reloadTitle'), t('reloadDiscardMessage', { name: fileName(tab.path) }), [
+      { label: t('btnReload'), value: 'reload', primary: true },
+      { label: t('btnCancel'), value: 'cancel' },
+    ]);
+    if (answer !== 'reload' || active !== tab) return;
+  }
+  const before = view.state.doc.toString();
+  const changed = before !== d.content || tab.dirty || tab.encoding !== d.encoding || tab.crlf !== d.crlf || tab.bom !== d.bom;
+  Object.assign(tab, { encoding: d.encoding, crlf: d.crlf, bom: d.bom });
+  if (before !== d.content) {
+    // 先把新內容設成「已存」基準再套用，分頁不會閃出未存檔記號
+    const tr = view.state.update({
+      changes: changedRange(before, d.content),
+      annotations: isolateHistory.of('full'),
+      userEvent: 'input.reload',
+    });
+    tab.savedDoc = tr.state.doc;
+    view.dispatch(tr);
+  } else if (tab.dirty) {
+    tab.savedDoc = view.state.doc;
+    tab.dirty = false;
+    emit('change', tab); // 讓自動備份等模組知道已經不是未存檔
+  }
+  tab.dirty = false;
+  syncGlobalDirty();
+  updateTitle();
+  renderTabs();
+  updateStatusInfo();
+  flashMessage(t(changed ? 'reloaded' : 'reloadNoChange'));
 }
 
 // ---- 匯出 PDF / Word（Markdown 分頁）----
@@ -693,7 +852,12 @@ async function formatActive() {
     return;
   }
   // 只替換有差異的範圍，游標與捲動位置盡量不跳動；可用 Ctrl+Z 復原
-  const after = result.text;
+  view.dispatch({ changes: changedRange(before, result.text), userEvent: 'input.format' });
+  flashMessage(t('formatted', { tool: t(result.tool) }));
+}
+
+// 比對前後文字頭尾相同的部分，回傳中間需要替換的範圍（自動排版、重新載入共用）
+function changedRange(before, after) {
   let start = 0;
   while (start < before.length && start < after.length && before[start] === after[start]) start++;
   let endBefore = before.length;
@@ -702,8 +866,7 @@ async function formatActive() {
     endBefore--;
     endAfter--;
   }
-  view.dispatch({ changes: { from: start, to: endBefore, insert: after.slice(start, endAfter) }, userEvent: 'input.format' });
-  flashMessage(t('formatted', { tool: t(result.tool) }));
+  return { from: start, to: endBefore, insert: after.slice(start, endAfter) };
 }
 
 // ---- 檢視模式（Markdown 分頁）----
@@ -799,6 +962,7 @@ const toolbarGroups = [
       { icon: FolderOpen, key: 'openFile', run: () => openFile() },
       { icon: Save, key: 'save', run: save },
       { icon: SaveAll, key: 'saveAs', run: saveAs },
+      { icon: RefreshCw, key: 'reload', run: () => reloadActive() },
     ],
   },
   {
@@ -932,9 +1096,10 @@ document.addEventListener(
     if (modalOpen) return;
     const ctrl = e.ctrlKey || e.metaKey;
     const k = e.key.toLowerCase();
-    // 擋掉會讓 WebView 重新整理而遺失內容的按鍵
+    // F5 / Ctrl+R：重新載入目前分頁（同時擋掉 WebView 本身的重新整理）
     if (e.key === 'F5' || (ctrl && k === 'r')) {
       e.preventDefault();
+      if (!e.repeat) reloadActive();
       return;
     }
     // 閱讀器分頁的快捷鍵（搜尋、縮放）
@@ -1158,7 +1323,9 @@ export const app = {
       await activate(tab);
     } else {
       let disk = null;
+      let stamp;
       if (info.path) {
+        stamp = await FileStamp(info.path);
         try {
           disk = await ReadFile(info.path);
         } catch {
@@ -1172,6 +1339,7 @@ export const app = {
           encoding: disk?.encoding ?? info.encoding ?? 'UTF-8',
           crlf: disk?.crlf ?? info.crlf ?? false,
           bom: disk?.bom ?? info.bom ?? false,
+          stamp,
         },
         disk?.content ?? '',
       );
@@ -1267,6 +1435,10 @@ async function init() {
   await restoreSession();
   for (const path of await GetStartupFiles()) await openPath(path);
   await recoverBackups();
+  // 偵測檔案被其他程式修改：視窗在前景時定期檢查，切回視窗、切換分頁時立刻檢查
+  setInterval(checkExternalChange, CHANGE_CHECK_INTERVAL);
+  window.addEventListener('focus', () => checkExternalChange());
+  app.on('active', () => checkExternalChange());
   if (await WasUpdated()) {
     showUpdateToast({ title: t('updatedTo', { version: await GetVersion() }), buttons: [{ label: t('btnOk'), primary: true, run: hideUpdateToast }] });
     setTimeout(hideUpdateToast, 8000);

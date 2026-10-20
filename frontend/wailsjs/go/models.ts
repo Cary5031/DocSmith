@@ -253,6 +253,22 @@ export namespace main {
 	        this.bom = source["bom"];
 	    }
 	}
+	export class FileStamp {
+	    exists: boolean;
+	    modTime: number;
+	    size: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new FileStamp(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.exists = source["exists"];
+	        this.modTime = source["modTime"];
+	        this.size = source["size"];
+	    }
+	}
 	export class ImportTarget {
 	    markdownPath: string;
 	    assetsDir: string;

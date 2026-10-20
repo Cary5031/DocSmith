@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"unsafe"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -61,4 +62,32 @@ func (a *App) ListDir(dir string) ([]DirEntry, error) {
 func (a *App) PathExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+// FileStamp 是檔案的修改時間與大小，前端用來偵測檔案是否被其他程式修改。
+type FileStamp struct {
+	Exists  bool  `json:"exists"`
+	ModTime int64 `json:"modTime"` // 微秒（奈秒會超過 JavaScript 數字的精確範圍）
+	Size    int64 `json:"size"`
+}
+
+// FileStamp 回傳檔案目前的修改時間與大小；檔案不存在或讀不到時 Exists 為 false。
+func (a *App) FileStamp(path string) FileStamp {
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() {
+		return FileStamp{}
+	}
+	return FileStamp{Exists: true, ModTime: info.ModTime().UnixMicro(), Size: info.Size()}
+}
+
+// IsForeground 回傳本程式的視窗是否在前景。前端平常用 document.hasFocus() 判斷，
+// 但焦點所在的 iframe（電子書內文）被移除後它會一直是 false，這時改問這裡。
+func (a *App) IsForeground() bool {
+	fg, _, _ := procGetForeground.Call()
+	if fg == 0 {
+		return false
+	}
+	var owner uint32
+	procGetWindowPID.Call(fg, uintptr(unsafe.Pointer(&owner)))
+	return owner == uint32(os.Getpid())
 }

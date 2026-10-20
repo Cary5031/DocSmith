@@ -106,7 +106,7 @@ body {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding-right: 6px;
+  padding-right: 4px;
   margin-right: 2px;
   border-right: 1px solid var(--border);
 }

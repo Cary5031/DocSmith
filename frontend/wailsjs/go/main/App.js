@@ -38,6 +38,10 @@ export function ExportPDF(arg1, arg2) {
   return window['go']['main']['App']['ExportPDF'](arg1, arg2);
 }
 
+export function FileStamp(arg1) {
+  return window['go']['main']['App']['FileStamp'](arg1);
+}
+
 export function FormatGo(arg1) {
   return window['go']['main']['App']['FormatGo'](arg1);
 }
@@ -60,6 +64,10 @@ export function ImportTargets(arg1, arg2) {
 
 export function IsDefaultMarkdownApp() {
   return window['go']['main']['App']['IsDefaultMarkdownApp']();
+}
+
+export function IsForeground() {
+  return window['go']['main']['App']['IsForeground']();
 }
 
 export function ListAIModels(arg1) {

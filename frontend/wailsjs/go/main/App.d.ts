@@ -20,6 +20,8 @@ export function ExportDialog(arg1:string,arg2:string,arg3:string,arg4:string):Pr
 
 export function ExportPDF(arg1:string,arg2:string):Promise<void>;
 
+export function FileStamp(arg1:string):Promise<main.FileStamp>;
+
 export function FormatGo(arg1:string):Promise<string>;
 
 export function GetAIConfig():Promise<main.AIConfigView>;
@@ -31,6 +33,8 @@ export function GetVersion():Promise<string>;
 export function ImportTargets(arg1:string,arg2:Array<string>):Promise<main.ImportTarget>;
 
 export function IsDefaultMarkdownApp():Promise<boolean>;
+
+export function IsForeground():Promise<boolean>;
 
 export function ListAIModels(arg1:main.AISaveRequest):Promise<Array<string>>;
 
