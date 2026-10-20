@@ -1,10 +1,10 @@
 {
-  "version": "1.1.0",
-  "releaseDate": "2026-09-23",
+  "version": "1.2.0",
+  "releaseDate": "2026-10-20",
   "downloadUrl": "https://github.com/Cary5031/DocSmith/raw/main/build/bin/DocSmith.exe",
-  "sha256": "3a24b553c67780fb0f30d0d69448f90963533d0bd2475fb0f75eea4a227238cd",
+  "sha256": "885432e6f5b56bc7299d7426f8a4359ae8546ec8560eca7a933bd3409bad4237",
   "notes": {
-    "zh-TW": "DocSmith 1.1.0：AI 可以使用工具。在 AI 設定勾選「允許 AI 使用工具」後，AI 能列出、讀取、搜尋側邊欄開啟的資料夾（唯讀），回覆上方會列出它查了哪些東西。",
-    "en": "DocSmith 1.1.0: the AI can now use tools. Turn on 'Let the AI use tools' in AI settings and it can list, read and search the folder open in the sidebar (read-only); each lookup is shown above its reply."
+    "zh-TW": "DocSmith 1.2.0：可以重新載入檔案。按工具列的「重新載入」或 F5 / Ctrl+R，就從磁碟重讀目前的分頁（Markdown、文字檔、PDF、電子書都適用，並保留游標或閱讀位置）；檔案被其他程式修改時，會跳出提示詢問是否重新載入。",
+    "en": "DocSmith 1.2.0: reload files from disk. Use the Reload toolbar button or F5 / Ctrl+R to reload the current tab (Markdown, text, PDF and e-books, keeping your place). When another program changes an open file, DocSmith asks whether to reload it."
   }
 }
