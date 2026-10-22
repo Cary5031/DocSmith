@@ -1,5 +1,5 @@
 ﻿# 產生單一執行檔 build\bin\DocSmith.exe
-# 需求：Go 1.23+、Node.js 20.19+、wails CLI（go install github.com/wailsapp/wails/v2/cmd/wails@latest）
+# 需求：Go 1.27.3+、Node.js 24.22.1+、wails CLI（go install github.com/wailsapp/wails/v2/cmd/wails@latest）
 #
 # 版本號以 version.json 為準（自動更新靠它判斷有無新版），建置時同步到 wails.json 的 productVersion。
 # 發布新版：.\publish.ps1 -Version 1.1.0   → 同時更新 version.json 的 version 與 releaseDate

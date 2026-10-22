@@ -24,7 +24,7 @@
 
 ## 開發
 
-需求：Go 1.23+、Node.js 20.19+、wails CLI（`go install github.com/wailsapp/wails/v2/cmd/wails@latest`）
+需求：Go 1.27.3+、Node.js 24.22.1+、wails CLI（`go install github.com/wailsapp/wails/v2/cmd/wails@latest`）
 
 ```powershell
 wails dev                  # 開發模式
