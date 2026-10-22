@@ -1,10 +1,10 @@
 {
-  "version": "1.2.0",
-  "releaseDate": "2026-10-20",
+  "version": "1.2.1",
+  "releaseDate": "2026-10-22",
   "downloadUrl": "https://github.com/Cary5031/DocSmith/raw/main/build/bin/DocSmith.exe",
-  "sha256": "885432e6f5b56bc7299d7426f8a4359ae8546ec8560eca7a933bd3409bad4237",
+  "sha256": "02e85e71c94ba595c54854f51d714b88341b80e15ddd3d56c27121b0beef9eb3",
   "notes": {
-    "zh-TW": "DocSmith 1.2.0：可以重新載入檔案。按工具列的「重新載入」或 F5 / Ctrl+R，就從磁碟重讀目前的分頁（Markdown、文字檔、PDF、電子書都適用，並保留游標或閱讀位置）；檔案被其他程式修改時，會跳出提示詢問是否重新載入。",
-    "en": "DocSmith 1.2.0: reload files from disk. Use the Reload toolbar button or F5 / Ctrl+R to reload the current tab (Markdown, text, PDF and e-books, keeping your place). When another program changes an open file, DocSmith asks whether to reload it."
+    "zh-TW": "DocSmith 1.2.1：安全性更新。改用 Go 1.27.3 建置，修補 Go 標準函式庫的多項安全性漏洞（包含 HTTPS 憑證驗證）。功能沒有變動。",
+    "en": "DocSmith 1.2.1: security update. Now built with Go 1.27.3, which fixes several security vulnerabilities in the Go standard library (including HTTPS certificate verification). No feature changes."
   }
 }

@@ -1,6 +1,6 @@
 module DocSmith
 
-go 1.25.0
+go 1.27.3
 
 require (
 	github.com/wailsapp/wails/v2 v2.16.0
